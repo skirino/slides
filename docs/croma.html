@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+<title>Introduction to Croma</title>
+
+<meta name="description" content="">
+<meta name="author" content="Shunsuke Kirino">
+<meta name="generator" content="reveal-ck 3.3.1">
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h2>Introduction to <a href="https://github.com/skirino/croma">croma</a>
+</h2>
+
+<p>桐野 俊輔 (<a href="https://github.com/skirino">skirino</a>) @ <a href="http://jp.access-company.com/">ACCESS</a></p>
+
+<p>tokyo.ex #1
+2016/4/19</p>
+
+</section>
+<section>
+<section>
+
+<p><a href="http://toolbox.elixir.pm/#p-31"><img src="images/macro_madness.png" width="70%"></a></p>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>What?</h3>
+
+<ul>
+<li>Elixir macro utilities
+
+<ul>
+<li>For extensive use of types</li>
+<li>With less typing</li>
+</ul>
+</li>
+<li>(This slides are based on croma v0.4.1)</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Motivation</h3>
+
+<ul>
+<li>Even in Elixir types are good
+
+<ul>
+<li>to clearly express intention</li>
+</ul>
+</li>
+<li>But
+
+<ul>
+<li>writing <code>@spec</code> is sometimes tedious</li>
+<li>no type-checking is in place</li>
+</ul>
+</li>
+<li>Let's fix that using macros</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>
+<code>def</code> with <code>@spec</code>
+</h3>
+<pre><code class="elixir">@spec foo(integer, atom) :: String.t
+def foo(i, a) do
+  "#{i} #{a}"
+end
+</code></pre>
+<ul>
+<li>
+<code>foo</code> appears twice; duplicated</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Let's make it DRY: <code>defun</code>
+</h3>
+<pre><code class="elixir">use Croma
+defun foo(i :: integer, a :: atom) :: String.t do
+  "#{i} #{a}"
+end
+</code></pre>
+<ul>
+<li>Compiler expands this to the previous example</li>
+<li>Each argument and its type is placed side by side</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>
+<code>def</code> with guard</h3>
+<pre><code class="elixir">@spec foo(integer, atom) :: String.t
+def foo(i, a) when is_integer(i) and is_atom(a) do
+  "#{i} #{a}"
+end
+</code></pre>
+<ul>
+<li>
+<code>i</code>, <code>a</code> in both parameter list and guard</li>
+<li>Specifying argument types twice:
+
+<ul>
+<li>
+<code>integer</code> and <code>is_integer/1</code>
+</li>
+<li>
+<code>atom</code> and <code>is_atom/1</code>
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Make it DRY again</h3>
+<pre><code class="elixir">use Croma
+defun foo(i :: g[integer], a :: g[atom]) :: String.t do
+  "#{i} #{a}"
+end
+</code></pre>
+<ul>
+<li>Expanded to the previous example
+
+<ul>
+<li>No duplicated <code>foo</code>, <code>i</code>, <code>a</code>
+</li>
+<li>Guards generated from <code>g[type]</code>
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Satisfied?</h3>
+
+<ul>
+<li>Not at all</li>
+<li>Guards are fairly limited
+
+<ul>
+<li>Only handful of functions are allowed in guards by VM</li>
+</ul>
+</li>
+<li>What we want:
+
+<ul>
+<li>More fine-grained data types
+
+<ul>
+<li>e.g. <code>String.t</code> =&gt; <code>UserName.t</code>
+</li>
+</ul>
+</li>
+<li>Checking values with arbitrary conditions
+
+<ul>
+<li>e.g. regex matching</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Building block: "Type module"</h3>
+
+<ul>
+<li>Compared with Erlang, modules in Elixir are much lighter weight
+
+<ul>
+<li>So let's make many small modules</li>
+</ul>
+</li>
+<li>We call modules that define the following as "type modules".
+
+<ul>
+<li><code>@type t</code></li>
+<li> <code>validate/1</code>
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Example (1)</h3>
+<pre><code class="elixir">defmodule UserName do
+  @type t :: String.t
+
+  defun validate(value :: any) :: {:ok, t} | {:error, any} do
+    if is_binary(value) and value =~ ~r/^\w+$/ do
+      {:ok, value}
+    else
+      {:error, :invalid}
+    end
+  end
+end
+</code></pre>
+</section>
+<section>
+
+<h3>Example (1')</h3>
+
+<ul>
+<li>Typical type modules can be easily defined with helpers provided by croma:</li>
+</ul>
+<pre><code class="elixir">defmodule UserName do
+  use Croma.SubtypeOfString, pattern: ~r/^\w+$/
+end
+</code></pre>
+</section>
+<section>
+
+<h3>Example (2)</h3>
+<pre><code class="elixir">defmodule User do
+  use Croma.Struct, fields: [
+    user_name: UserName,
+    password:  Password,
+  ]
+end
+</code></pre>
+<ul>
+<li>Using <code>UserName</code> and <code>Password</code>, it's converted to
+
+<ul>
+<li><code>defstruct</code></li>
+<li><code>@type t :: %__MODULE__{...}</code></li>
+<li><code>validate/1</code></li>
+<li>(and more)</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Example (2')</h3>
+<pre><code class="elixir">defmodule User do
+  import Croma.TypeGen # for `nilable`
+
+  use Croma.Struct, fields: [
+    user_name:   UserName,
+    password:    Password,
+    description: Croma.String,                 # built-in type as type module
+    age:         nilable(Croma.NonNegInteger), # ad-hoc generation of type module
+  ]
+end
+</code></pre>
+<ul>
+<li>Useful for e.g. validating JSON data</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>
+<code>defun</code> with type modules</h3>
+<pre><code class="elixir">defun register(user_name :: v[UserName.t], password :: v[Password.t]) :: User.t do
+  do_register(user_name, password)
+end
+</code></pre>
+<ul>
+<li>
+<a href="https://en.wikipedia.org/wiki/Design_by_contract">Design by contract</a>
+
+<ul>
+<li>inside function body <code>user</code> is guaranteed to be valid</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Expansion of <code>v[Mod.t]</code>
+</h3>
+<pre><code class="elixir">@spec register_user(UserName.t, Password.t) :: User.t
+def register_user(user_name, password) do
+  user_name =
+    case UserName.validate(user_name) do
+      {:ok, value}     -&gt; value
+      {:error, reason} -&gt; raise "validation error for user_name: #{inspect(reason)}"
+    end
+  password =
+    case Password.validate(password) do
+      {:ok, value}     -&gt; value
+      {:error, reason} -&gt; raise "validation error for password: #{inspect(reason)}"
+    end
+  do_register(user_name, password)
+end
+</code></pre>
+</section>
+<section>
+
+<h3>Doesn't it make things slow?</h3>
+
+<ul>
+<li>Yes but don't worry
+
+<ul>
+<li>You can disable arguments validation in production</li>
+<li>Code generation is done by Elixir code and thus controllable</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Summary</h3>
+
+<ul>
+<li><p><code>croma</code> reduces boilerplate code and makes type-oriented programming more pleasant</p></li>
+<li><p>Feedbacks/comments/suggestions/bug reports/PRs are more than welcome</p></li>
+<li><p>Happy <code>defun</code>-ing!</p></li>
+<li><p>(BTW, my boss said that we are hiring!)</p></li>
+</ul>
+
+</section>
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'page',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+  var configOptions = {"controls":true,"progress":true,"history":true,"center":true}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>

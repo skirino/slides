@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+<title>On Purely Functional Data Structures</title>
+
+<meta name="description" content="">
+<meta name="author" content="Shunsuke Kirino">
+<meta name="generator" content="reveal-ck 3.3.1">
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h2>Purely Functional Data Structures</h2>
+
+<p>桐野 俊輔(<a href="https://github.com/skirino">skirino</a>)</p>
+
+</section>
+<section>
+<section>
+
+<p><a href="http://www.amazon.co.jp/Purely-Functional-Structures-Chris-Okasaki/dp/0521663504"><img src="images/PFDS_cover.jpg" width="40%"></a></p>
+
+<p>Written by <a href="http://www.usma.edu/eecs/SitePages/Chris%20Okasaki.aspx">Chris Okasaki</a></p>
+
+</section>
+<section>
+
+<h2>Every programmer should ...</h2>
+
+<p><a href="https://www.safaribooksonline.com/library/view/97-things-every/9780596809515/ch02.html"><img src="images/97_ch2.png" width="70%"></a></p>
+
+</section>
+<section>
+
+<h2>Real World Haskellより</h2>
+
+<ul>
+<li>「12.9.3 読書案内」
+
+<ul>
+<li><em>... Okasakiの本を関数プログラマにとっての必読書として推奨します。...</em></li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>
+<a href="http://ja.wikipedia.org/wiki/%E3%83%A2%E3%83%BC%E3%83%80%E3%82%B9%E3%83%9D%E3%83%8D%E3%83%B3%E3%82%B9">モーダスポネンス</a>により</h2>
+
+<ul>
+<li>全プログラマの必読書。</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>"Functional" data structures (1)</h2>
+
+<ul>
+<li>純粋関数型: 「<a href="http://ja.wikipedia.org/wiki/%E5%8F%82%E7%85%A7%E9%80%8F%E9%81%8E%E6%80%A7">参照透過性</a>があるコード」とだいたい同義
+
+<ul>
+<li>データ構造に関しては、データが書き換わると参照透過でない</li>
+<li>つまり、immutableなデータ構造の話(persistentとも言う)</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>"Functional" data structures (2)</h2>
+
+<ul>
+<li>メリット
+
+<ul>
+<li>"いつの間にか変わってた"系のバグの心配が無い</li>
+<li>"前のバージョン"が有効であり続ける</li>
+<li>並行処理で使いやすい</li>
+</ul>
+</li>
+<li>デメリット
+
+<ul>
+<li>大きなデータ構造の一部だけを更新する際に、全体のコピーを伴う場合がある</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>"Functional" data structures (3)</h2>
+
+<ul>
+<li>immutableなデータ構造における更新
+
+<ul>
+<li>旧バージョンのデータ構造から一部を入れ替えた新バージョンを別オブジェクトとして作成</li>
+<li>効率のために新旧バージョンでデータを共有
+
+<ul>
+<li>ListやTreeがわかりやすくうまく行く例</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>この本のテクニックを駆使すれば、persistentかつ効率の良いステキなデータ構造を設計できる(らしい)</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>例: FIFOキュー</h2>
+
+<ul>
+<li>Queueのインターフェース</li>
+</ul>
+<pre><code class="scala">trait Queue[+T]
+{
+  def isEmpty: Boolean
+  def enqueue[U &gt;: T](u: U): Queue[U]
+  def dequeue: (T, Queue[T])
+}
+</code></pre>
+<ul>
+<li>以後のコードでは以下がある前提</li>
+</ul>
+<pre><code class="scala">type L[T] = List[T]
+type S[T] = Stream[T]
+</code></pre>
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>2リストキュー (1)</h2>
+<pre><code class="scala">class BatchedQueue[+T](f: L[T], r: L[T]) extends Queue[T] {
+  def isEmpty: Boolean = f.isEmpty
+  def enqueue[U &gt;: T](u: U): BatchedQueue[U] = check(f, u :: r)
+  def dequeue: (T, BatchedQueue[T]) = f match {
+    case Nil    =&gt; throw new RuntimeException("Empty!")
+    case h :: t =&gt; (h, check(t, r))
+  }
+  private def check[T](newf: L[T], newr: L[T]): BatchedQueue[T] = {
+    if(newf.isEmpty)
+      new BatchedQueue(newr.reverse, Nil)
+    else
+      new BatchedQueue(newf, newr)
+  }
+}
+</code></pre>
+</section>
+<section>
+
+<h2>2リストキュー (2)</h2>
+
+<ul>
+<li>先頭が速くて末尾は遅いListを2つ組み合わせる
+
+<ul>
+<li>rear先頭に追加</li>
+<li>front先頭から取り出し</li>
+<li>front側のリストが空になったときにrear側をreverseして補充</li>
+</ul>
+</li>
+<li>計算量
+
+<ul>
+<li>最悪実行時間: <code>reverse</code>が実行されるときに<code>O(N)</code>
+</li>
+<li>償却実行時間: <code>O(1)</code>っぽいが...?</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>2リストキュー (3)</h2>
+
+<ul>
+<li>
+<code>reverse</code>が起きる直前のキューを何度もdequeueするときは...
+
+<ul>
+<li>毎回同じように<code>reverse</code>して<code>O(N)</code>
+</li>
+<li>その際コストを償却する他の操作を伴わない</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>メモ化(+遅延評価)</h2>
+
+<ul>
+<li>何度も同じListを<code>reverse</code>してるのだから、メモ化で初回の結果を使い回せばOK</li>
+<li>「困ったら間接層を導入」とも言う</li>
+</ul>
+<pre><code class="scala">class Lazy[+A](thunk: =&gt; A) {
+  private lazy val value: A = thunk
+  def force: A = value
+}
+</code></pre>
+</section>
+<section>
+
+<h2>銀行家キュー (1)</h2>
+<pre><code class="scala">class BankersQueue[+T](lenf: Int, f: Lazy[S[T]], lenr: Int, r: S[T]) extends Queue[T]
+{
+  def isEmpty: Boolean = lenf == 0
+  def enqueue[U &gt;: T](u: U): BankersQueue[U] = check(lenf, f, lenr + 1, S.Cons(u, r))
+  def dequeue: (T, BankersQueue[T]) = f.force match {
+    case S.Empty       =&gt; throw new RuntimeException("Empty!")
+    case S.Cons(h, f2) =&gt; (h, check(lenf - 1, f2, lenr, r))
+  }
+  private def check[T](lenf: Int, f: Lazy[S[T]], lenr: Int, r: S[T]): BankersQueue[T] = {
+    if(lenf &lt; lenr)
+      new BankersQueue(lenf + lenr, Lazy(f.force ++ r.reverse), 0, S.Empty)
+    else
+      new BankersQueue(lenf, f, lenr, r)
+  }
+}
+</code></pre>
+</section>
+<section>
+
+<h2>銀行家キュー (2)</h2>
+
+<ul>
+<li>「rear側を<code>reverse</code>してfront側に連結する操作」を<code>Lazy</code>に包んでメモ化
+
+<ul>
+<li>何度も<code>reverse</code>を実行することはなくなった</li>
+<li>償却計算量: <code>O(1)</code>
+</li>
+</ul>
+</li>
+<li>(計算量の解析で使っている"banker's method"が名前の由来)</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>実時間キュー (1)</h2>
+
+<ul>
+<li>最悪計算量をなんとかしたい</li>
+<li>worst caseのときの<code>reverse</code>処理を各ステップでちまちま実行するようにすれば、<code>O(1)</code>にできるはず</li>
+</ul>
+
+</section>
+<section>
+
+<h2>実時間キュー (2)</h2>
+<pre><code class="scala">class RealtimeQueue[+T](f: S[T], r: L[T], s: S[T]) extends Queue[T]
+{
+  def isEmpty: Boolean = f.isEmpty
+  def enqueue[U &gt;: T](u: U): RealtimeQueue[U] = check(f, u :: r, s)
+  def dequeue: (T, RealtimeQueue[T]) = f match {
+    case S.Empty       =&gt; throw new RuntimeException("Empty!")
+    case S.Cons(h, f2) =&gt; (h, check(f2.force, r, s))
+  }
+...
+</code></pre>
+</section>
+<section>
+
+<h2>実時間キュー (3)</h2>
+<pre><code class="scala">...
+  private def check[T](f: S[T], r: L[T], s0: S[T]): RealtimeQueue[T] = s0 match {
+    case S.Cons(x, s) =&gt; new RealtimeQueue(f, r, s.force)
+    case S.Empty      =&gt;
+      val f2 = rotate(f, r, S.Empty)
+      new RealtimeQueue(f2, Nil, f2)
+  }
+  private def rotate[T](xs0: S[T], ys0: L[T], a: S[T]): S[T] = ys0 match {
+    case Nil     =&gt; throw new Exception("Logic error!")
+    case y :: ys =&gt; xs0 match {
+      case S.Empty       =&gt; S.Cons(y, a)
+      case S.Cons(x, xs) =&gt; S.Cons(x, Lazy(rotate(xs.force, ys, S.Cons(y, a))))
+    }
+  }
+}
+</code></pre>
+</section>
+<section>
+
+<h2>実時間キュー (4)</h2>
+
+<ul>
+<li>
+<code>s: Stream[T]</code>はfront側Streamの少し先を保持</li>
+<li>
+<code>check</code>で地味に<code>s: Stream[T]</code>の評価を一段階<code>force</code>して進める</li>
+<li>進めるものがない場合、rear側をreverseするthunkを作って補充</li>
+<li>すべての操作が<code>O(1)</code>に収まっている
+
+<ul>
+<li>
+<code>rotate</code>で再帰に見えるが<code>Lazy</code>を作るだけ</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>最後に</h2>
+
+<ul>
+<li>(言語を問わず)できるかぎりimmutableなデータ構造を使おう
+
+<ul>
+<li>破壊的更新が要るとわかってからmutable版に乗り換え</li>
+</ul>
+</li>
+<li>immutableデータ構造の実装で何を行っているかイメージしよう
+
+<ul>
+<li>主要な操作のオーダーを把握しておく</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>References</h2>
+
+<ul>
+<li><a href="http://www.amazon.co.jp/Purely-Functional-Structures-Chris-Okasaki/dp/0521663504">http://www.amazon.co.jp/Purely-Functional-Structures-Chris-Okasaki/dp/0521663504</a></li>
+<li><a href="http://www.kmonos.net/pub/Presen/PFDS.pdf">http://www.kmonos.net/pub/Presen/PFDS.pdf</a></li>
+</ul>
+
+</section>
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'page',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+  var configOptions = {"controls":true,"progress":true,"history":true,"center":true}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>

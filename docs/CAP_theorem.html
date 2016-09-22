@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+<title>CAP定理のはなし</title>
+
+<meta name="description" content="">
+<meta name="author" content="Shunsuke Kirino">
+<meta name="generator" content="reveal-ck 3.3.1">
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h2>CAP定理のはなし</h2>
+
+<p>桐野 俊輔(<a href="https://github.com/skirino">skirino</a>)</p>
+
+</section>
+<section>
+<section>
+
+<h2>Brief History</h2>
+
+<ul>
+<li>1998: Eric Brewerが「予想」として発表</li>
+<li>2002: <a href="http://webpages.cs.luc.edu/%7Epld/353/gilbert_lynch_brewer_proof.pdf">GilbertとLynchによる形式的な証明</a>
+</li>
+<li>2012: <a href="http://www.cs.berkeley.edu/%7Erxin/db-papers/CAP.pdf">"CAP Twelve Years Later" by Eric Brewer</a>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>CAP theorem?</h2>
+
+<ul>
+<li>「分散システムのデータについて以下の"望ましい3つの性質"を同時に満たすことは不可能」
+
+<ul>
+<li>Consistency</li>
+<li>Availability</li>
+<li>Partition tolerance</li>
+</ul>
+</li>
+<li>(2つを同時に満たすことは可能)</li>
+<li>分散システムの設計におけるトレードオフになる</li>
+</ul>
+
+</section>
+<section>
+
+<h2>"2 of 3" classification of DBs</h2>
+
+<p><img src="images/cap.png" width="600px"></p>
+
+<p>(taken from <a href="https://www.rubyplus.com/articles/851">https://www.rubyplus.com/articles/851</a> )</p>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>Consistency</h2>
+
+<ul>
+<li>「いつも"最新"のデータを取得し、更新以前の古いデータが取得されることがないこと」
+
+<ul>
+<li>つまり、書き込みの後に読み込みを行うと、必ず書き込みが反映されている</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Availability</h2>
+
+<ul>
+<li>「生きているnodeが受け取ったリクエストが必ず結果を返すこと」
+
+<ul>
+<li>(死んでるnodeにリクエストして返事がなくても"available"でありうる)</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Partition tolerance</h2>
+
+<ul>
+<li>「<strong>任意の</strong>partitionが発生しているときにも"適切に"動作すること」
+
+<ul>
+<li>Network partition:
+
+<ul>
+<li>5台が3-2に分かれるケース</li>
+<li>5台が4-1に分かれるケース(1台が故障した場合もほぼ同様の状況)</li>
+<li>5台が1×5に分かれるケース(すべての通信が途絶)</li>
+</ul>
+</li>
+<li>
+<a href="http://webpages.cs.luc.edu/%7Epld/353/gilbert_lynch_brewer_proof.pdf">証明</a>における"network partition"の形式的定義:
+
+<ul>
+<li><em>In order to model partition tolerance, the network will be allowed to lose arbitrarily many messages sent from one node to another.</em></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>Intuitive explanation</h2>
+
+<ul>
+<li>2 nodesからなるシステムで分断が起きているとき
+
+<ul>
+<li>片側でデータ更新してからもう片方から読み込み =&gt; "C"でない</li>
+<li>"C"を保つためにはデータ更新を受け付けてはならない =&gt; "A"でない</li>
+<li>"C"かつ"A"のためには通信が必要 =&gt; "P"でない</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Trivial "2 of 3" behaviors</h2>
+
+<ul>
+<li>3つのうち2つが同時に実現できることは明らか
+
+<ul>
+<li>常にエラー =&gt; CP</li>
+<li>初期値を返し続ける =&gt; AP</li>
+<li>single node =&gt; CA
+
+<ul>
+<li>(「CAでPでない」が何を意味するかは不明確だが、特に面白くない部分なので深く考える必要なし)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>CAP confusions (1)</h2>
+
+<ul>
+<li>partition toleranceの意味合い
+
+<ul>
+<li>partitionは障害であり100%コントロールできない(他2つとは別物)。NW, HWなどの障害がありうる限り、partitionが発生する想定をすべき</li>
+<li>その際にも"C"か"A"のどちらかはキープしたい</li>
+<li><a href="https://foundationdb.com/key-value-store/white-papers/the-cap-theorem">現代的な解釈は <em>during a network partition, a distributed system must choose either Consistency or Availability.</em></a></li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>CAP confusions (2)</h2>
+
+<ul>
+<li>partitionにも程度がある
+
+<ul>
+<li>例えば5台のうち1台が故障したような状況
+
+<ul>
+<li>このレベルのpartitionでは、妥当な実装であれば"C"と"A"を保てる(過半数nodeでconsensus)</li>
+<li>このために"C"と"A"を犠牲にする必要はない</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>CAP confusions (3)</h2>
+
+<ul>
+<li>"2 of 3" view is misleading
+
+<ul>
+<li>致命的レベルのpartitionはめったに起こらない。大部分の時間帯は"C"と"A"両方を保証するシステムが望ましい</li>
+<li>1つのシステム内で"C"と"A"の間のバランスを変更可能(tunable consistency)</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Case study: Mongo replica set (1)</h3>
+
+<ul>
+<li>primaryが2つになる場合がある
+
+<ul>
+<li>nodes 3つのreplica set</li>
+<li>=&gt; "primary"と"2 secondaries"にsplit</li>
+<li>=&gt; secondary 2つから新しいprimaryが選ばれる</li>
+<li>(元々のprimaryはそのうちsecondaryになる)</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Case study: Mongo replica set (2)</h3>
+
+<ul>
+<li>primaryが2つの時間帯に
+
+<ul>
+<li>majorityへ書き込み =&gt; minorityから読み込み
+
+<ul>
+<li>stale read</li>
+</ul>
+</li>
+<li>minorityへ書き込み =&gt; majorityから読み込み
+
+<ul>
+<li>stale read</li>
+</ul>
+</li>
+<li>minorityへ書き込み:
+
+<ul>
+<li>
+<a href="http://docs.mongodb.org/manual/core/replica-set-rollbacks/">rollback</a>によるloss</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>(<a href="http://docs.mongodb.org/manual/reference/write-concern/">write concern</a>次第で事情が微妙に変わりうる)</li>
+<li><a href="http://docs.mongodb.org/manual/core/replication-introduction/#edge-cases-2-primaries">Mongoのdocumentにも書かれている</a></li>
+</ul>
+
+</section>
+<section>
+
+<h3>Case study: Mongo replica set (3)</h3>
+
+<ul>
+<li>Mongo公式ドキュメントで<a href="https://www.mongodb.com/nosql-explained">"strong consistency"と言っている</a>
+
+<ul>
+<li>実際はcorner caseでの"C"の保証はない</li>
+</ul>
+</li>
+<li>マズい部分: 以下の両方の修正がおそらく必要
+
+<ol>
+<li>書き込みの<a href="http://docs.mongodb.org/manual/reference/write-concern/#read-isolation-behavior">isolation levelが"read uncommitted"</a>: 書き込み途中で結果が読み取れてしまう点
+
+<ul>
+<li>これはpartitionがないときでも問題</li>
+</ul>
+</li>
+<li>読み取り時に他nodeの状況を見ていない点 (もしくはprimaryが2つになってしまう点)</li>
+</ol>
+</li>
+<li>参考: <a href="https://aphyr.com/posts/322-call-me-maybe-mongodb-stale-reads">https://aphyr.com/posts/322-call-me-maybe-mongodb-stale-reads</a></li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>New generation of DBs (1)</h2>
+
+<ul>
+<li>目一杯"C"と"A"を追求していると思しきDB:
+
+<ul>
+<li>"C"寄り:
+
+<ul>
+<li><a href="https://foundationdb.com/">FoundationDB</a></li>
+<li><a href="http://orientdb.com/orientdb/">OrientDB</a></li>
+<li><a href="http://www.nuodb.com/">NuoDB</a></li>
+<li>
+<a href="http://static.googleusercontent.com/media/research.google.com/ja//archive/spanner-osdi2012.pdf">Google Spanner</a>, <a href="https://github.com/cockroachdb/cockroach">CockroachDB</a>
+</li>
+</ul>
+</li>
+<li>分散トランザクション、半数未満のnode故障への耐性</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>New generation of DBs (2)</h2>
+
+<ul>
+<li>目一杯"C"と"A"を追求していると思しきDB:
+
+<ul>
+<li>"A"寄り:
+
+<ul>
+<li><a href="http://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf">Amazon Dynamo</a></li>
+<li><a href="http://cassandra.apache.org/">Cassandra</a></li>
+<li><a href="http://basho.co.jp/riak/">Riak</a></li>
+</ul>
+</li>
+<li>tunable consistency</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>Summary</h2>
+
+<ul>
+<li>CAP定理の意味するところとトレードオフ
+
+<ul>
+<li>Mongoで妙なことが起きる話</li>
+<li>一時のNoSQLの流行から少し経って、新手DBの設計のトレンド</li>
+</ul>
+</li>
+<li>分散システムを選定する際は要チェック
+
+<ul>
+<li>(自戒も込めて)"strongly consistent", "highly available"などの宣伝文句の意味を正確に理解しよう</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h2>References</h2>
+
+<ul>
+<li><a href="http://webpages.cs.luc.edu/%7Epld/353/gilbert_lynch_brewer_proof.pdf">http://webpages.cs.luc.edu/~pld/353/gilbert<em>lynch</em>brewer_proof.pdf</a></li>
+<li><a href="http://www.cs.berkeley.edu/~rxin/db-papers/CAP.pdf">http://www.cs.berkeley.edu/~rxin/db-papers/CAP.pdf</a></li>
+<li><a href="http://codahale.com/you-cant-sacrifice-partition-tolerance/">http://codahale.com/you-cant-sacrifice-partition-tolerance/</a></li>
+<li><a href="http://blog.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/">http://blog.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/</a></li>
+<li><a href="https://foundationdb.com/key-value-store/white-papers/the-cap-theorem">https://foundationdb.com/key-value-store/white-papers/the-cap-theorem</a></li>
+<li><a href="https://aphyr.com/posts/322-call-me-maybe-mongodb-stale-reads">https://aphyr.com/posts/322-call-me-maybe-mongodb-stale-reads</a></li>
+</ul>
+
+</section>
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'page',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+  var configOptions = {"controls":true,"progress":true,"history":true,"center":true}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>

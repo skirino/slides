@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+<title>わかった気になるElixir macro</title>
+
+<meta name="description" content="">
+<meta name="author" content="Shunsuke Kirino">
+<meta name="generator" content="reveal-ck 3.3.1">
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h2>わかった気になるElixir macro</h2>
+
+<p>桐野 俊輔(<a href="https://github.com/skirino">skirino</a>)</p>
+
+</section>
+<section>
+<section>
+
+<h3>
+<a href="http://elixir-lang.org/">Elixir</a>とは</h3>
+
+<ul>
+<li>
+<a href="http://www.erlang.org/">Erlang</a>のプログラミングモデルとVM</li>
+<li>とっつきやすいsyntaxとツール群</li>
+<li>まともな(整数のリストでない)String</li>
+<li><strong>メタプログラミング</strong></li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Elixir基礎文法</h3>
+
+<ul>
+<li>See also <a href="https://media.pragprog.com/titles/elixir/ElixirCheat.pdf">Elixir cheetsheet</a>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>関数適用、リスト、無名関数</h3>
+<pre><code>iex&gt; Enum.map([1, 2, 3], fn i -&gt; i * 2 end)
+[2, 4, 6]
+</code></pre>
+</section>
+<section>
+
+<h3>tuple, map</h3>
+<pre><code>iex&gt; tuple = {"foo", :bar, 10}
+{"foo", :bar, 10}
+iex&gt; elem(tuple, 1)
+:bar
+</code></pre>
+<pre><code>iex&gt; m = %{a: 1, b: 2}
+%{a: 1, b: 2}
+iex&gt; m[:a]
+1
+iex&gt; Map.put(m, :a, 10)
+%{a: 10, b: 2}
+</code></pre>
+</section>
+<section>
+
+<h3>モジュール、関数定義</h3>
+<pre><code>iex&gt; defmodule M do
+...&gt;   def f(x) do
+...&gt;     IO.puts(x)
+...&gt;   end
+...&gt; end
+
+iex&gt; M.f("hello")
+hello
+:ok
+</code></pre>
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Elixir macro</h3>
+
+<ul>
+<li>compile時の<a href="https://en.wikipedia.org/wiki/Abstract_syntax_tree">AST</a>変換
+
+<ul>
+<li>Cのプリプロセッサのような字句変換ではない</li>
+<li>compilerはErlang/Elixir製</li>
+<li>compile時とはいえ普通に自前Elixirコードを動かせる</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3><a href="http://elixir-lang.org/">homoiconicity</a></h3>
+
+<ul>
+<li>コード(のAST)を言語のデータ構造で表現できる
+
+<ul>
+<li>Lispなどと同じ</li>
+</ul>
+</li>
+<li>例:</li>
+</ul>
+<pre><code>iex&gt; quote do: elem(tuple, 1)
+{:elem, [context: Elixir, import: Kernel], [{:tuple, [], Elixir}, 1]}
+</code></pre>
+<pre><code>iex&gt; quote do
+...&gt;   String.split("hello", "e")
+...&gt; end
+{{:., [], [{:__aliases__, [alias: false], [:String]}, :split]},
+ [], ["hello", "e"]}
+</code></pre>
+</section>
+<section>
+
+<h3>ASTの内部表現</h3>
+
+<ul>
+<li>3要素tupleの連なり
+
+<ol>
+<li>ASTノードを表すatom (関数・演算子の名前)</li>
+<li>environment (どのモジュールがimportされてるかとか)</li>
+<li>引数(子ノード)のリスト or 変数の属するモジュール(atom)</li>
+</ol>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Macroのやること</h3>
+
+<ul>
+<li>呼び出し元から渡ってくる引数はquoted expression</li>
+<li>普通の関数のように変換処理を書く</li>
+<li>quoted expressionを返す</li>
+<li>=&gt; 呼び出し位置にASTが挿入される</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Macro定義・展開の例</h3>
+<pre><code>iex&gt; defmodule M do
+...&gt;   defmacro m(quoted) do
+...&gt;     IO.inspect quoted
+...&gt;     quoted
+...&gt;   end
+...&gt; end
+
+iex&gt; require M # macroを有効化
+iex&gt; M.m(IO.puts("hello")) # macro起動
+{{:., [line: 6], [{:__aliases__, [counter: 0, line: 6], [:IO]}, :puts]},
+ [line: 6], ["hello"]}
+hello
+:ok
+</code></pre>
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>quoted expressionの構築方法</h3>
+
+<ul>
+<li>普通のElixirコードをquoteする
+
+<ul>
+<li>読み書きしやすい、小回りが効かない</li>
+<li>展開後の構造が決まっている場合</li>
+</ul>
+</li>
+<li>直接データ構造を作る
+
+<ul>
+<li>難しい、柔軟</li>
+<li>展開後の構造が確定しない場合</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>quoteによる構築</h3>
+<pre><code>iex&gt; defmodule M do
+...&gt;   defmacro m do
+...&gt;     quote do
+...&gt;       IO.puts("hello")
+...&gt;     end
+...&gt;   end
+...&gt; end
+
+iex&gt; require M
+iex&gt; M.m # macro起動、putsするコードに差し替わる
+hello
+:ok
+</code></pre>
+</section>
+<section>
+
+<h3>quoteを使わない方法</h3>
+<pre><code>iex&gt; defmodule M do
+...&gt;   defmacro m do
+...&gt;     {{:., [], [{:__aliases__, [], [:IO]}, :puts]}, [], ["hello"]}
+...&gt;   end
+...&gt; end
+
+iex&gt; require M
+iex&gt; M.m # 同様にputsするコードに差し替わる
+hello
+:ok
+</code></pre>
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>quote内部への値の埋め込み</h3>
+<pre><code>iex&gt; defmodule M do
+...&gt;   defmacro m(x) do
+...&gt;     quote do
+...&gt;       IO.inspect(x)
+...&gt;     end
+...&gt;   end
+...&gt; end
+
+iex&gt; require M
+iex&gt; M.m("hello") # IO.inspect(x) となりxが見つからない
+** (RuntimeError) undefined function: x/0
+</code></pre>
+</section>
+<section>
+
+<h3><code>unquote</code></h3>
+<pre><code>iex&gt; defmodule M do
+...&gt;   defmacro m(x) do
+...&gt;     quote do
+...&gt;       IO.inspect(unquote(x))
+...&gt;     end
+...&gt;   end
+...&gt; end
+
+iex&gt; require M
+iex&gt; M.m("hello") # IO.inspect("hello") に展開
+"hello"
+</code></pre>
+</section>
+<section>
+
+<h3>例: <code>Kernel.if/2</code>
+</h3>
+<pre><code>defmacro if(condition, clauses) do
+  do_clause   = Keyword.get(clauses, :do  , nil)
+  else_clause = Keyword.get(clauses, :else, nil)
+
+  optimize_boolean(quote do
+    case unquote(condition) do
+      x when x in [false, nil] -&gt; unquote(else_clause)
+      _                        -&gt; unquote(do_clause)
+    end
+  end)
+end
+</code></pre>
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>unquote fragment</h3>
+<pre><code>iex&gt; defmodule M do
+...&gt;   kv = [foo: 1, bar: 2]
+...&gt;   # コンパイル時変数をコードに埋め込む。以下に展開される
+...&gt;   # `def foo(), do: 1`
+...&gt;   # `def bar(), do: 2`
+...&gt;   Enum.each(kv, fn {k, v} -&gt;
+...&gt;     def unquote(k)(), do: unquote(v)
+...&gt;   end)
+...&gt; end
+
+iex&gt; M.foo
+1
+iex&gt; M.bar
+2
+</code></pre>
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Hooks</h3>
+
+<ul>
+<li>
+<code>__using__(args)</code>
+
+<ul>
+<li>
+<code>use M</code>で起動されるmacro(require不要)</li>
+<li>複数moduleで共通のコードを入れ込む</li>
+</ul>
+</li>
+<li>
+<code>__before_compile__(env)</code>
+
+<ul>
+<li>defmoduleの中身を処理し終わって今からコンパイル、のときに起動</li>
+<li>"中身の処理"の間に溜めこんだ情報を使ってdefするためのもの</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+<pre><code>iex&gt; defmodule M1 do
+...&gt;   defmacro __using__(_) do
+...&gt;     quote do
+...&gt;       def f(x), do: x + 1
+...&gt;     end
+...&gt;   end
+...&gt; end
+
+iex&gt; defmodule M2 do
+...&gt;   use M1
+...&gt; end
+
+iex&gt; M2.f(3)
+4
+</code></pre>
+</section>
+<section>
+<pre><code>iex&gt; defmodule M1 do
+...&gt;   defmacro __before_compile__(env) do
+...&gt;     ns = Module.get_attribute(env.module, :numbers)
+...&gt;     quote bind_quoted: [ns: ns] do
+...&gt;       Enum.each(ns, fn n -&gt;
+...&gt;         def f(unquote(n)), do: to_string(unquote(n))
+...&gt;       end)
+...&gt;     end
+...&gt;   end
+...&gt; end
+iex&gt; defmodule M2 do
+...&gt;   @before_compile M1
+...&gt;   @numbers [1, 2, 3]
+...&gt; end
+iex&gt; M2.f(1) # =&gt; "1"
+iex&gt; M2.f(0) # =&gt; FunctionClauseError
+</code></pre>
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>例1: method的なsyntax</h3>
+
+<ul>
+<li>
+<a href="https://github.com/skirino/croma">Croma</a>より: <a href="https://github.com/skirino/croma/blob/master/lib/croma/struct_call_syntax.ex">source</a>, <a href="http://hexdocs.pm/croma/Croma.StructCallSyntax.html">API doc</a>
+</li>
+</ul>
+<pre><code>iex&gt; defmodule S do
+...&gt;   defstruct [:a, :b]
+...&gt;   def f(s, i) do
+...&gt;     s.a + s.b + i
+...&gt;   end
+...&gt; end
+
+iex&gt; import Croma.StructCallSyntax # `~&gt;`演算子を見えるようにする
+nil
+iex&gt; s = %S{a: 1, b: 2}
+%S{a: 1, b: 2}
+iex&gt; s~&gt;f(3) # 新しいsyntax!
+6
+</code></pre>
+</section>
+<section>
+
+<h3>例1: method的なsyntax</h3>
+
+<ul>
+<li>展開後
+
+<ul>
+<li>内部データになっているmoduleを取り出してから関数呼び出し</li>
+<li>"レシーバ"は第一引数にする</li>
+</ul>
+</li>
+</ul>
+<pre><code>iex&gt; s.__struct__.f(s, 3)
+6
+</code></pre>
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>例2: Haskellのdo記法的なもの</h3>
+
+<ul>
+<li>
+<a href="https://github.com/skirino/croma">Croma</a>より: <a href="https://github.com/skirino/croma/blob/master/lib/croma/monad.ex">source</a>, <a href="http://hexdocs.pm/croma/Croma.Monad.html">API doc</a>
+</li>
+</ul>
+<pre><code>iex&gt; use Croma
+nil
+iex&gt; Croma.Result.m do # それっぽいsyntax!
+...&gt;   x &lt;- {:ok, 1}
+...&gt;   y &lt;- {:ok, 2}
+...&gt;   pure x + y
+...&gt; end
+{:ok, 3}
+</code></pre>
+</section>
+<section>
+
+<h3>例2: Haskellのdo記法的なもの</h3>
+
+<ul>
+<li>展開後
+
+<ul>
+<li>
+<code>bind/2</code>呼び出しの連鎖に置き換え</li>
+</ul>
+</li>
+</ul>
+<pre><code>iex&gt; Croma.Result.bind({:ok, 1}, fn x -&gt;
+...&gt;   Croma.Result.bind({:ok, 2}, fn y -&gt;
+...&gt;     Croma.Result.pure(x + y)
+...&gt;   end)
+...&gt; end)
+{:ok, 3}
+</code></pre>
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>tips: quoted expressionの構築</h3>
+
+<ul>
+<li>作りたいコードをquoteしてみる</li>
+<li>出力結果のデータ構造を作るコードを書く</li>
+<li>デバッグ
+
+<ul>
+<li>AST同士の比較</li>
+<li>
+<code>Macro.to_string</code>でコードに変換して比較</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>tips: マクロ処理中の状態の保持</h3>
+
+<ul>
+<li>連番を振る、メモ化、etc.
+
+<ul>
+<li>globalな状態の保持はErlang的に苦手</li>
+</ul>
+</li>
+<li>
+<a href="http://elixir-lang.org/getting-started/module-attributes.html">module attribute</a>を使う</li>
+<li>困ったらプロセスを作る
+
+<ul>
+<li>
+<a href="http://elixir-lang.org/docs/v1.0/elixir/Agent.html">Agent</a>で状態をwrap</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>"With great power comes great responsibility"</h3>
+
+<ul>
+<li>macroコードは最小限にする
+
+<ul>
+<li>不要なmacroは本番コードに入れない</li>
+<li>処理はなるべくヘルパー関数に移譲する</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'page',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+  var configOptions = {"controls":true,"progress":true,"history":true,"center":true}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>

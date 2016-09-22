@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+<title>Stuff goes bad: Erlang in Angerの紹介</title>
+
+<meta name="description" content="">
+<meta name="author" content="Shunsuke Kirino">
+<meta name="generator" content="reveal-ck 3.3.1">
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h2>
+<a href="http://www.erlang-in-anger.com/">Stuff goes bad: Erlang in Anger</a>の紹介</h2>
+
+<p>桐野 俊輔(<a href="https://github.com/skirino">skirino</a>)</p>
+
+</section>
+<section>
+<section>
+
+<h3>この本について</h3>
+
+<ul>
+<li>著者
+
+<ul>
+<li> <a href="http://learnyousomeerlang.com/">Learn You Some Erlang for Great Good!</a>のFred Hebertさん &amp; Heroku</li>
+<li>FredさんはHerokuのrouting teamのメンバー</li>
+</ul>
+</li>
+<li>Creative Commons License</li>
+<li>Erlang関連のtips集、比較的運用寄り
+
+<ul>
+<li>この手の情報源は貴重</li>
+<li>初心者向けではない</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>この発表について</h3>
+
+<ul>
+<li>本の中の大事なところの抜粋・要約</li>
+<li>ツールの細かい使い方などはスキップ</li>
+<li>(based on v1.0.3 of the book)</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Erlangについておさらい</h3>
+
+<ul>
+<li>Chapter 1: How to Dive into a Code Base</li>
+<li>Chapter 2: Building Open Source Erlang Software</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Actor Model</h3>
+
+<ul>
+<li>ErlangVMは軽量な内部プロセスを実装している
+
+<ul>
+<li>OSプロセスとの区別に注意</li>
+</ul>
+</li>
+<li>Erlangプロセスは
+
+<ul>
+<li>自分の実行コンテキスト・スタック/ヒープ・mailboxを持つ</li>
+<li>VMのスケジューラにCPUコアを割り当てられたら動作(preemptive)</li>
+<li>メモリ領域を共有しない(プロセス単位でGC)</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Supervision Tree</h3>
+
+<ul>
+<li>crashして死んだプロセスを生き返らせるプロセス(supervisor)でツリー構造を作る
+
+<ul>
+<li>要するにエラー時にrestartする仕組み
+
+<ul>
+<li>だいたいの問題はtransientなのでrestartは多くの場合良い戦略</li>
+</ul>
+</li>
+<li>未知のバグ・ネットワーク障害などにほぼ対応できる</li>
+</ul>
+</li>
+<li>Supervision tree関連の仕組みはOTPがまるっと提供してくれている</li>
+</ul>
+
+</section>
+<section>
+
+<h3>おまけ1: <a href="https://www.google.co.jp/url?sa=t&amp;rct=j&amp;q=&amp;esrc=s&amp;source=web&amp;cd=2&amp;cad=rja&amp;uact=8&amp;ved=0CCcQFjABahUKEwjlmYbiwPTIAhXh6KYKHUI-Bo4&amp;url=http%3A%2F%2Fqconlondon.com%2Flondon-2011%2Fqconlondon.com%2Fdl%2Fqcon-london-2011%2Fslides%2FSteveVinoski_LetItCrashExceptWhenYouShouldnt.pdf&amp;usg=AFQjCNGlHodIUTr7_7yfOgGvMhhpTSYd4Q&amp;sig2=v4-RWzmF9QLnIrFHdZfqOQ">Let it crash ... Except When You Shouldn't</a>
+</h3>
+
+<ul>
+<li>"Let it crash"は勘違いされてる場合も多い
+
+<ul>
+<li>(最近では"let it fail"とも言うらしい)</li>
+</ul>
+</li>
+<li>"Handle what you can, and let someone else handle the rest."
+
+<ul>
+<li>自分のコンテキストでhandleすべきエラーをsupervisor任せにして無視してはならない</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Supervision treeでの初期化処理</h3>
+
+<ul>
+<li>supervisorが子プロセスを立ち上げ(<code>start_link</code>)て初期化(<code>init/1</code>)を待つ部分は"同期的"
+
+<ul>
+<li>"まともな状態"の子プロセスを開始することを保証</li>
+<li>リトライの起点になる"まともな状態"についてちゃんと考える必要がある</li>
+</ul>
+</li>
+<li>リトライで対処する類のエラーが起きうる処理を<code>init/1</code>に含めるべきではない
+
+<ul>
+<li>例: (たいていは後者にすべき)
+
+<ul>
+<li>remote DBとの接続まで<code>init/1</code>でやる</li>
+<li>DB接続は切れることがあるので<code>init/1</code>では接続せず後回し</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>おまけ2: Avoid distributed supervision tree</h3>
+
+<ul>
+<li>remote actorをtransparentに扱えると聞いて、「remote actorを含むsupervision treeを構成しよう」と思うかもしれないが、オススメできない
+
+<ul>
+<li>remote actorと通信できなくなったsupervisorはrestartを実行できない可能性がある</li>
+<li>要するに、初期化処理の実行がきちんとできないケースがあるので良くない</li>
+</ul>
+</li>
+<li>それぞれのnodeでOTP applicationごとにsupervision treeを作るべき</li>
+</ul>
+
+</section>
+<section>
+
+<h3>OTP application</h3>
+
+<ul>
+<li>moduleの集まり(+α)にメタデータ(バージョンなど)がついたもの
+
+<ul>
+<li>library application: <a href="http://www.erlang.org/doc/man/application.html">application behaviour</a>を実装していない (supervision treeを持たない)</li>
+<li>regular application: <a href="http://www.erlang.org/doc/man/application.html">application behaviour</a>を実装している (supervision treeを持つ)</li>
+</ul>
+</li>
+<li>
+<a href="https://github.com/rebar/rebar">rebar</a>や<a href="http://elixir-lang.org/getting-started/mix-otp/introduction-to-mix.html">mix</a>といったビルドツールがOTP application単位で動作するので、普通に作業していればだいたいわかる</li>
+</ul>
+
+</section>
+<section>
+
+<h3>OTP release</h3>
+
+<ul>
+<li>複数のOTP applicationをパッケージングしたもの
+
+<ul>
+<li>ErlangVMのバイナリも含まれる</li>
+<li>release単位でシステムとして稼働させる</li>
+<li>hot code upgradeなどの仕組みも備わっている</li>
+</ul>
+</li>
+<li>設定項目が山ほどあって大変なので、手間を軽減するツール群がある
+
+<ul>
+<li>
+<a href="http://www.erlang.org/doc/man/systools.html">systools</a>, <a href="http://www.erlang.org/doc/man/reltool.html">reltool</a>, <a href="https://github.com/erlware/relx">relx</a>, <a href="https://github.com/bitwalker/exrm">exrm</a>
+</li>
+<li>Elixirではexrm経由でrelxを使うのが普通</li>
+</ul>
+</li>
+<li>いろいろ実験しないとよくわからない(してもよくわからない)</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Chapter 3: Planning for Overload</h3>
+
+<ul>
+<li>多くの障害はメモリ不足
+
+<ul>
+<li>特にmessageが溜まりすぎてしまう事態</li>
+</ul>
+</li>
+<li>過負荷への対処
+
+<ul>
+<li>back-pressureで入ってくるデータを制限</li>
+<li>入ってきたデータを捨てる</li>
+</ul>
+</li>
+<li>ここでのscopeは、ボトルネック最適化・計算機資源の増強・等々をやってもいつかは発生する問題としての「過負荷」</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Restricting Input</h3>
+
+<ul>
+<li>システムの奥底のレイヤーから順にback-pressureを適用していく必要がある
+
+<ul>
+<li>例: DBアクセス層のback-pressureを定義、それをWebAPI層に適用してHTTPレスポンスに反映</li>
+</ul>
+</li>
+<li>fairnessについても要検討
+
+<ul>
+<li>特定ユーザが大量にリクエストのせいで、少ししか使ってないユーザのリクエストがブロックされてもOK?</li>
+</ul>
+</li>
+<li>この手の用途に使えるライブラリ群:
+
+<ul>
+<li>
+<a href="https://github.com/jlouis/safetyvalve">safetyvalue</a>, <a href="https://github.com/mmzeeman/breaky">breaky</a>, <a href="https://github.com/jlouis/fuse">fuse</a>, <a href="https://github.com/klarna/circuit_breaker">circuit_breaker</a>
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Discarding Data</h3>
+
+<ul>
+<li>扱いきれない分をランダムに選んで捨てる</li>
+<li>一時的な過負荷: bufferを使う
+
+<ul>
+<li>queue buffer: 順序を維持</li>
+<li>stack buffer: latencyについてのQoSを満たせないリクエストをごそっと捨てる</li>
+</ul>
+</li>
+<li>恒久的な過負荷: 実作業を行うworker processを増やす(VM内でload balancing)</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Chapter 4: Connecting to Remote Nodes</h3>
+
+<ul>
+<li>relxを使っていればスクリプトからerlang shellに接続できるので、割愛</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Chapter 5: Runtime Metrics</h3>
+
+<ul>
+<li>
+<a href="https://github.com/ferd/recon">recon</a>の説明
+
+<ul>
+<li>だいたいErlang標準のmetrics取得APIのwrapper</li>
+<li>稼働中システムの動作を妨げない範囲で、便利なインターフェースになっている</li>
+<li>remote_consoleから動かして情報取得をカンタンにする</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Chapter 6: Reading Crash Dumps</h3>
+
+<ul>
+<li>reconの中に入っているスクリプトの説明
+
+<ul>
+<li>そのままだとわかりづらいerl_crash.dumpファイルの解析</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Chapter 7: Memory Leaks</h3>
+
+<ul>
+<li>crashdumpやruntime metricsから以下のような兆候を見つけたらメモリリークが疑われる
+
+<ul>
+<li>メモリ割り当てエラー</li>
+<li>一定期間おきのcrash</li>
+<li>負荷ピーク以外で突然ダウン(ピーク時のダウンはおそらくchapter3の話)</li>
+</ul>
+</li>
+<li>
+<code>erlang:memory/0</code>などでカテゴリ別のメモリ使用量がわかる</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Atom</h3>
+
+<ul>
+<li>atomはglobalなテーブルに居残り続ける(GCされない)</li>
+<li>動的な文字列をatomに変換してはならない</li>
+<li>
+<code>xmerl</code>など一部のライブラリで勝手にatomに変換してしまうものがあるので注意</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Code</h3>
+
+<ul>
+<li>(基本的にはそうそう問題にはならないはず)</li>
+<li>Hot code upgradeでは、モジュールごとに最大2バージョンまで保持する</li>
+<li>
+<a href="http://www.erlang.org/doc/man/HiPE_app.html">HiPE</a>コンパイルされたモジュールは残り続けるので要注意
+
+<ul>
+<li>あんまり頻繁に更新されるモジュールをHiPEコンパイルするのは避けるべき</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>ETS</h3>
+
+<ul>
+<li>ErlangVMに備わっているインメモリDB的なもの(dets, mnesiaもある)</li>
+<li>GCの対象ではないので、領域の開放にはレコードを明示的に削除</li>
+<li>どのテーブルが問題か<code>ets:i/0</code>で確認可能</li>
+</ul>
+
+</section>
+<section>
+
+<h3>プロセス関連</h3>
+
+<ul>
+<li>(多岐にわたるので代表的なチェック項目)</li>
+<li>どのプロセスともlinkされてない浮いてるプロセス</li>
+<li>プロセスごとのメモリ使用量、mailboxサイズ</li>
+<li>GC実行時間(<code>erlang:system_monitor/2</code>を使う)</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Binaries (1)</h3>
+
+<ul>
+<li>Erlangのbinaryの実体には2タイプある
+
+<ul>
+<li>プロセスのヒープに配置: 64バイト以下のもの。他のデータ同様にGCされる</li>
+<li>globalなヒープ領域に配置: サイズが大きいか、他のglobalなbinaryのsub-binary。プロセスのメモリ領域には参照だけが置かれる。参照カウント方式でGCされる</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Binaries (2)</h3>
+
+<ul>
+<li>問題(1): 小さいsub-binaryのせいで本体が解放されない</li>
+<li>対応策
+
+<ul>
+<li>明示的にsub-binaryをコピーで作れば別の実体ができて避けられる</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Binaries (3)</h3>
+
+<ul>
+<li>問題(2): プロセスのヒープが逼迫してGCが走ってはじめて参照が破棄される。参照1コのサイズは小さいので、プロセスのGCの契機になりづらい。例えば、binaryを受け渡すrouterプロセス</li>
+<li>対応策
+
+<ul>
+<li>バイナリが経由するプロセスを減らす(メッセージを入れたプロセスと処理するプロセスとで直接やり取りさせる)</li>
+<li>適切なタイミングでGC起動するようにする</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Memory fragmentation</h3>
+
+<ul>
+<li>OSから割り当てられたメモリ量と、ErlangVM内で有効活用できている量とで差異がある場合、fragmentationが疑われる</li>
+<li>ErlangVMには役割別に10種ほどのallocatorがあり、そのどれが問題かを調べる必要がある</li>
+<li>簡単な対応策はないが
+
+<ul>
+<li>メモリ割り当てパターンを把握する</li>
+<li>allocatorごとに("best fit"などの)戦略を選べるので、これをいじると良いかも</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section>
+
+<h3>その他のメモリリーク要因</h3>
+
+<ul>
+<li>C driver</li>
+<li>NIF</li>
+<li>VMそのもの(可能性低)</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Chapter 8: CPU and Scheduler Hogs</h3>
+
+<ul>
+<li>多数のプロセスとschedulerがゴニョゴニョやっているので、CPU使用率について把握するのは難しい</li>
+<li>各プロセスの"reduction count"が目安になる
+
+<ul>
+<li>"reduction"は処理の単位でだいたい関数呼び出し</li>
+<li>1000 reductionsを使い切ると別プロセスにCPUが回される</li>
+</ul>
+</li>
+<li>schedulingに時間がかかったときに通知をもらう: <code>erlang:system_monitor/2</code>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Chapter 9: Tracing</h3>
+
+<ul>
+<li>いわゆるデバッガはあんまり役に立たない
+
+<ul>
+<li>あるプロセスの実行をbreakpointで止めても、他プロセスは動いてたりする</li>
+</ul>
+</li>
+<li>ErlangVMとライブラリが提供するtracingを使うのがベター
+
+<ul>
+<li>とりあえず<a href="http://ferd.github.io/recon/recon_trace.html"><code>recon_trace</code>モジュール</a>を使っとけばOK</li>
+</ul>
+</li>
+</ul>
+
+</section>
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'page',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+  var configOptions = {"controls":true,"progress":true,"history":true,"center":true}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>

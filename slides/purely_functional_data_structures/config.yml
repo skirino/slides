@@ -1,0 +1,4 @@
+theme:      "night"
+transition: "page"
+author:     "Shunsuke Kirino"
+title:      "On Purely Functional Data Structures"
