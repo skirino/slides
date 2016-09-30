@@ -10,3 +10,4 @@
 - [Stuff goes bad: Erlang in Angerの紹介](https://skirino.github.io/slides/erlang_stuff_goes_bad.html)
 - [On Purely Functional Data Structures](https://skirino.github.io/slides/purely_functional_data_structures.html)
 - [Introduction to raft_fleet](https://skirino.github.io/slides/raft_fleet.html)
+- [Success Typing and Dialyzer](https://skirino.github.io/slides/success_typing_and_dialyzer.html)

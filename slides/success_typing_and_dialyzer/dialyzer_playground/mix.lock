@@ -1,0 +1,2 @@
+%{"croma": {:hex, :croma, "0.5.0", "f49fd662788d316c65acd6e27623a22021530ecd48498d66154cddd792d074ac", [:mix], []},
+  "dialyze": {:hex, :dialyze, "0.2.1", "9fb71767f96649020d769db7cbd7290059daff23707d6e851e206b1fdfa92f9d", [:mix], []}}
