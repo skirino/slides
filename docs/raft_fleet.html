@@ -78,7 +78,12 @@
 <h3>Motivation</h3>
 
 <ul>
-<li>Even armed with abstractions provided by Erlang and Elixir, it's still hard to manipulate just a single "state" within a cluster</li>
+<li>Even armed with abstractions provided by Erlang and Elixir, it's still hard to manipulate just a single "state" within a cluster
+
+<ul>
+<li>Actually we want multiple instances of such "state"s</li>
+</ul>
+</li>
 <li>That's because we need to
 
 <ul>
@@ -93,14 +98,19 @@
 </section>
 <section>
 
-<h3>Requirements</h3>
+<h3>Requirements (1)</h3>
 
 <ul>
-<li>
-<a href="https://en.wikipedia.org/wiki/Linearizability">Linearizable</a> operations
+<li>Host multiple "state"s within a cluster
 
 <ul>
-<li>i.e. client operations are processed atomically</li>
+<li>Automatic load-balancing, reasonably scalable</li>
+</ul>
+</li>
+<li>Support of <a href="https://en.wikipedia.org/wiki/Linearizability">Linearizable</a> operations
+
+<ul>
+<li>i.e. client operations on a "state" are processed atomically in the issued order</li>
 <li>also we don't want
 
 <ul>
@@ -110,13 +120,21 @@
 </li>
 </ul>
 </li>
-<li>Tolerate failure of minority of consensus group members and automatic recovery
+</ul>
+
+</section>
+<section>
+
+<h3>Requirements (2)</h3>
+
+<ul>
+<li>Fault tolerance for minority of consensus group members
 
 <ul>
 <li>tolerance for DC-failure is also nice to have</li>
 </ul>
 </li>
-<li>Automatic load-balancing, reasonably scalable</li>
+<li>Automatic recovery from non-critical node failure</li>
 <li>No persistence is needed (for our usage)</li>
 </ul>
 
@@ -147,7 +165,7 @@
 </section>
 <section>
 
-<h3>Related works</h3>
+<h3>Related works (1)</h3>
 
 <ul>
 <li>
@@ -159,6 +177,14 @@
 <li>large and heavyweight; failure recovery is difficult (as far as I know)</li>
 </ul>
 </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Related works (2)</h3>
+
+<ul>
 <li>Basho's <a href="https://github.com/basho/riak_ensemble">riak_ensemble</a>
 
 <ul>

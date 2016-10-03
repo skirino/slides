@@ -18,6 +18,7 @@
 ### Motivation
 
 - Even armed with abstractions provided by Erlang and Elixir, it's still hard to manipulate just a single "state" within a cluster
+    - Actually we want multiple instances of such "state"s
 - That's because we need to
     - replicate data to multiple nodes for high availability
     - determine leader from replicas to serialize client requests
@@ -26,16 +27,24 @@
 
 ---
 
-### Requirements
+### Requirements (1)
 
-- [Linearizable](https://en.wikipedia.org/wiki/Linearizability) operations
-    - i.e. client operations are processed atomically
+- Host multiple "state"s within a cluster
+    - Automatic load-balancing, reasonably scalable
+- Support of [Linearizable](https://en.wikipedia.org/wiki/Linearizability) operations
+    - i.e. client operations on a "state" are processed atomically in the issued order
     - also we don't want
         - to lose any acknowledged writes
         - to have duplicated writes due to client retry
-- Tolerate failure of minority of consensus group members and automatic recovery
+
+
+---
+
+### Requirements (2)
+
+- Fault tolerance for minority of consensus group members
     - tolerance for DC-failure is also nice to have
-- Automatic load-balancing, reasonably scalable
+- Automatic recovery from non-critical node failure
 - No persistence is needed (for our usage)
 
 ---
@@ -50,12 +59,17 @@
 
 ---
 
-### Related works
+### Related works (1)
 
 - [mnesia](http://erlang.org/doc/man/mnesia.html)
     - replication and distributed transaction
     - table and record (tuple), data is replicated on table-basis
     - large and heavyweight; failure recovery is difficult (as far as I know)
+
+---
+
+### Related works (2)
+
 - Basho's [riak_ensemble](https://github.com/basho/riak_ensemble)
     - built for similar goal (CAS for Riak)
     - (an improved variant of) Paxos consensus algorithm
