@@ -389,6 +389,221 @@ end
 </section>
 </section>
 
+<section>
+<section>
+
+<h3>Other components in croma</h3>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3><code>Croma.Result</code></h3>
+
+<ul>
+<li>Utilities to handle results of computations that can either succeed or fail.</li>
+<li>(In the following I assume <code>alias Croma.Result, as: R</code>)</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Errors in Elixir functions</h3>
+
+<ol>
+<li>return error-tuple
+
+<ul>
+<li>requires pattern-matching on results, most flexible</li>
+</ul>
+</li>
+<li>
+<code>raise/1</code>
+
+<ul>
+<li>typically caller won't rescue and then crash</li>
+</ul>
+</li>
+<li>crash (<code>exit/1</code>)
+
+<ul>
+<li>situations that should be handled with restart (by supervisor)</li>
+</ul>
+</li>
+<li>(please forget about <code>throw/1</code>)</li>
+</ol>
+
+</section>
+<section>
+
+<h3><code>R.t</code></h3>
+
+<ul>
+<li>
+<code>R.t/1</code> is the type to express results of computations.</li>
+<li>A value of <code>R.t/1</code> is either ok-tuple or error-tuple.</li>
+</ul>
+<pre><code class="ex">@type t(a) :: {:ok, a} | {:error, any}
+</code></pre>
+<ul>
+<li>2nd element of ok-tuple is the resulting value of the successful computation.</li>
+<li>2nd element of error-tuple is the reason of the failure.</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Utils defined in <code>R</code>
+</h3>
+
+<ul>
+<li>You can simply pattern match values of <code>R.t(a)</code>.</li>
+<li>However for common operations croma defines utility functions for you.</li>
+</ul>
+
+</section>
+<section>
+
+<h3>
+<code>R.get/2</code>, <code>R.get!/1</code>
+</h3>
+
+<ul>
+<li>To extract successful value of a result use <code>R.get/1</code>, <code>R.get/2</code>, <code>R.get!/1</code>
+</li>
+</ul>
+<pre><code class="ex">R.get({:ok, 1})       # =&gt; 1
+R.get({:error, :foo}) # =&gt; nil
+
+R.get({:ok, 1}      , 0) # =&gt; 1
+R.get({:error, :foo}, 0) # =&gt; 0
+
+R.get!({:ok, 1})       # =&gt; 1
+R.get!({:error, :foo}) # =&gt; raise
+</code></pre>
+</section>
+<section>
+
+<h3><code>R.map/2</code></h3>
+
+<ul>
+<li>To combine
+
+<ol>
+<li>computation that may fail, and</li>
+<li>computation that never fails,</li>
+</ol>
+</li>
+<li>use <code>R.map/2</code>:</li>
+</ul>
+<pre><code class="ex">R.map({:ok, 1}      , fn i -&gt; i + 1 end) # =&gt; {:ok, 2}
+R.map({:error, :foo}, fn i -&gt; i + 1 end) # =&gt; {:error, :foo}
+</code></pre>
+</section>
+<section>
+
+<h3><code>R.map_error/2</code></h3>
+
+<ul>
+<li>To tweak error reason use <code>R.map_error/2</code>
+</li>
+</ul>
+<pre><code class="ex">R.map_error({:ok, 1}      , &amp;Atom.to_string/1) # =&gt; {:ok, 1}
+R.map_error({:error, :foo}, &amp;Atom.to_string/1) # =&gt; {:error, "foo"}
+</code></pre>
+</section>
+<section>
+
+<h3>
+<code>R.ok?/1</code>, <code>R.error?/1</code>
+</h3>
+
+<ul>
+<li>If all you want is just whether succeeded or failed, use <code>R.ok?/1</code> or <code>R.error?/1</code>
+</li>
+</ul>
+<pre><code class="ex">R.ok?({:ok, 1})       # =&gt; true
+R.ok?({:error, :foo}) # =&gt; false
+
+R.error?({:ok, 1})       # =&gt; false
+R.error?({:error, :foo}) # =&gt; true
+</code></pre>
+</section>
+<section>
+
+<h3>
+<code>R.or_else/2</code> (macro)</h3>
+
+<ul>
+<li>If you have "plan B" for when a computation failed, use <code>R.or_else/2</code> macro</li>
+</ul>
+<pre><code class="ex">R.or_else({:ok, 1}      , {:ok, 2}      ) # =&gt; {:ok, 1}
+R.or_else({:error, :foo}, {:ok, 2}      ) # =&gt; {:ok, 2}
+R.or_else({:ok, 1}      , {:error, :bar}) # =&gt; {:ok, 1}
+R.or_else({:error, :foo}, {:error, :bar}) # =&gt; {:error, :bar}
+</code></pre>
+</section>
+<section>
+
+<h3><code>R.bind/2</code></h3>
+
+<ul>
+<li>To combine 2 computations that may fail, use <code>R.bind/2</code>
+</li>
+</ul>
+<pre><code class="ex">f = fn(i) -&gt;
+  if rem(i, 2) == 0, {:ok, i}, else: {:error, :not_even}
+end
+R.bind({:ok, 2}      , f) # =&gt; {:ok, 2}
+R.bind({:ok, 3}      , f) # =&gt; {:error, :not_even}
+R.bind({:error, :foo}, f) # =&gt; {:error, :foo}
+</code></pre>
+</section>
+<section>
+
+<h3>
+<code>R.m/1</code> (macro)</h3>
+
+<ul>
+<li>To sequentially run many computations that may fail, use <code>R.m/1</code> macro</li>
+</ul>
+<pre><code class="ex">R.m do
+  x &lt;- {:ok, 1}
+  y &lt;- {:ok, 2}
+  z &lt;- {:ok, 3}
+  pure x + y + z
+end
+# =&gt; {:ok, 6}
+</code></pre>
+</section>
+<section>
+
+<h3><code>R.try/1</code></h3>
+
+<ul>
+<li>To convert exception to error tuple use <code>R.try/1</code>
+</li>
+</ul>
+<pre><code class="ex">R.try(fn -&gt; 1           end) # =&gt; {:ok, 1}
+R.try(fn -&gt; raise "foo" end) # =&gt; {:error, {%RuntimeError{message: "foo"}, [:try]}}
+</code></pre>
+</section>
+<section>
+
+<h3><code>R.sequence/1</code></h3>
+
+<ul>
+<li>To convert multiple results into a single result use <code>R.sequence/1</code>
+</li>
+</ul>
+<pre><code class="ex">R.sequence([{:ok, 1}, {:ok, 2}      ]) # =&gt; {:ok, [1, 2]}
+R.sequence([{:ok, 1}, {:error, :foo}]) # =&gt; {:error, :foo}
+</code></pre>
+</section>
+</section>
+
   </div>
 </div>
 
