@@ -7,7 +7,7 @@
 
 <meta name="description" content="">
 <meta name="author" content="Shunsuke Kirino">
-<meta name="generator" content="reveal-ck 3.3.1">
+<meta name="generator" content="reveal-ck 3.4.0">
 
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -58,18 +58,16 @@
 <h3>Motivation</h3>
 
 <ul>
-<li>Erlang and Elixir : much higher-level than many other languages
-
-<ul>
-<li>most of low-level things are abstracted away
-
-<ul>
-<li>processes and mailboxes as building blocks</li>
-<li>dead simple node-to-node communication (location transparency)</li>
-</ul>
-</li>
-</ul>
-</li>
+  <li>Erlang and Elixir : much higher-level than many other languages
+    <ul>
+      <li>most of low-level things are abstracted away
+        <ul>
+          <li>processes and mailboxes as building blocks</li>
+          <li>dead simple node-to-node communication (location transparency)</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -78,21 +76,19 @@
 <h3>Motivation</h3>
 
 <ul>
-<li>Even armed with abstractions provided by Erlang and Elixir, it's still hard to manipulate just a single "state" within a cluster
-
-<ul>
-<li>Actually we want multiple instances of such "state"s</li>
-</ul>
-</li>
-<li>That's because we need to
-
-<ul>
-<li>replicate data to multiple nodes for high availability</li>
-<li>determine leader from replicas to serialize client requests</li>
-<li>migrate a process from a node to another node (while processing client requests) for operational reasons</li>
-<li>load-balance tasks (processes) withing nodes</li>
-</ul>
-</li>
+  <li>Even armed with abstractions provided by Erlang and Elixir, it’s still hard to manipulate just a single “state” within a cluster
+    <ul>
+      <li>And actually we want multiple instances of such “state”s</li>
+    </ul>
+  </li>
+  <li>That’s because we need to
+    <ul>
+      <li>replicate data within multiple nodes for high availability</li>
+      <li>determine leader from replicas to serialize client requests</li>
+      <li>migrate a process from a node to another node (while processing client requests) for operational reasons</li>
+      <li>load-balance tasks (processes) withing nodes</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -101,25 +97,22 @@
 <h3>Requirements (1)</h3>
 
 <ul>
-<li>Host multiple "state"s within a cluster
-
-<ul>
-<li>Automatic load-balancing, reasonably scalable</li>
-</ul>
-</li>
-<li>Support of <a href="https://en.wikipedia.org/wiki/Linearizability">Linearizable</a> operations
-
-<ul>
-<li>i.e. client operations on a "state" are processed atomically in the issued order</li>
-<li>also we don't want
-
-<ul>
-<li>to lose any acknowledged writes</li>
-<li>to have duplicated writes due to client retry</li>
-</ul>
-</li>
-</ul>
-</li>
+  <li>Host multiple “state”s within a cluster
+    <ul>
+      <li>Automatic load-balancing, reasonably scalable</li>
+    </ul>
+  </li>
+  <li>Support <a href="https://en.wikipedia.org/wiki/Linearizability">Linearizable</a> semantics for operations
+    <ul>
+      <li>i.e. client operations on a “state” are processed atomically in the issued order</li>
+      <li>also we don’t want
+        <ul>
+          <li>to lose any acknowledged writes</li>
+          <li>to have duplicated writes due to client retry</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -128,14 +121,13 @@
 <h3>Requirements (2)</h3>
 
 <ul>
-<li>Fault tolerance for minority of consensus group members
-
-<ul>
-<li>tolerance for DC-failure is also nice to have</li>
-</ul>
-</li>
-<li>Automatic recovery from non-critical node failure</li>
-<li>No persistence is needed (for our usage)</li>
+  <li>Tolerate failures of minority of consensus group members
+    <ul>
+      <li>tolerance for DC-failure is also nice to have</li>
+    </ul>
+  </li>
+  <li>Automatically recover from non-critical node failure</li>
+  <li>(no persistence is needed)</li>
 </ul>
 
 </section>
@@ -144,22 +136,20 @@
 <h3>Basic design</h3>
 
 <ul>
-<li>Use <a href="https://raft.github.io/">Raft consensus algorithm</a>
+  <li>Use <a href="https://raft.github.io/">Raft consensus algorithm</a>
 </li>
-<li>Divide Raft implementation and other parts as separate libs
-
-<ul>
-<li>for clear separation of concerns
-
-<ul>
-<li>
-<code>rafted_value</code>: Raft implementation</li>
-<li>
-<code>raft_fleet</code>: Running multiple consensus groups within a cluster</li>
-</ul>
-</li>
-</ul>
-</li>
+  <li>Divide Raft implementation and other parts as separate libs
+    <ul>
+      <li>for clear separation of concerns
+        <ul>
+          <li>
+<a href="https://github.com/skirino/rafted_value"><code>rafted_value</code></a>: Raft protocol implementation</li>
+          <li>
+<a href="https://github.com/skirino/raft_fleet"><code>raft_fleet</code></a>: Running and managing multiple consensus groups in a cluster</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -168,15 +158,14 @@
 <h3>Related works (1)</h3>
 
 <ul>
-<li>
+  <li>
 <a href="http://erlang.org/doc/man/mnesia.html">mnesia</a>
-
-<ul>
-<li>replication and distributed transaction</li>
-<li>table and record (tuple), data is replicated on table-basis</li>
-<li>large and heavyweight; failure recovery is difficult (as far as I know)</li>
-</ul>
-</li>
+    <ul>
+      <li>replication and distributed transaction</li>
+      <li>table and record (tuple), data is replicated on table-basis</li>
+      <li>large and heavyweight; failure recovery is difficult (as far as I know)</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -185,15 +174,14 @@
 <h3>Related works (2)</h3>
 
 <ul>
-<li>Basho's <a href="https://github.com/basho/riak_ensemble">riak_ensemble</a>
-
-<ul>
-<li>built for similar goal (CAS for Riak)</li>
-<li>(an improved variant of) Paxos consensus algorithm</li>
-<li>specialized to key-value operations</li>
-<li>basically a part of Riak, not a standalone lib</li>
-</ul>
-</li>
+  <li>Basho’s <a href="https://github.com/basho/riak_ensemble">riak_ensemble</a>
+    <ul>
+      <li>built for similar goal (CAS for Riak)</li>
+      <li>(an improved variant of) Paxos consensus algorithm</li>
+      <li>specialized to key-value operations</li>
+      <li>basically a part of Riak, not a standalone lib</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -206,21 +194,19 @@
 <a href="https://github.com/skirino/rafted_value">rafted_value</a> - Overview</h3>
 
 <ul>
-<li>Raft protocol implementation</li>
-<li>Raft logs are not persisted</li>
-<li>Supports membership changes</li>
-<li>Each Raft member as a <a href="http://erlang.org/doc/man/gen_fsm.html"><code>:gen_fsm</code></a> process
-
-<ul>
-<li>in retrospect <a href="http://erlang.org/doc/man/gen_server.html"><code>:gen_server</code></a> is also OK</li>
-</ul>
-</li>
-<li>Each command is enforced to be pure
-
-<ul>
-<li>minimal information is included in Raft logs</li>
-</ul>
-</li>
+  <li>Raft protocol implementation</li>
+  <li>Raft logs are not persisted</li>
+  <li>Supports membership changes</li>
+  <li>Each Raft member as a <a href="http://erlang.org/doc/man/gen_fsm.html"><code>:gen_fsm</code></a> process
+    <ul>
+      <li>in retrospect <a href="http://erlang.org/doc/man/gen_server.html"><code>:gen_server</code></a> is also OK</li>
+    </ul>
+  </li>
+  <li>Each command is enforced to be pure
+    <ul>
+      <li>so that only minimal information is included in Raft logs</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -228,7 +214,8 @@
 
 <h3>
 <a href="https://github.com/skirino/rafted_value">rafted_value</a> - Public API</h3>
-<pre><code class="ex">start_link(info, name_or_nil \\ nil)
+
+<pre><code class="language-ex">start_link(info, name_or_nil \\ nil)
 make_config(data_module, opts \\ [])
 status(server)
 remove_follower(leader, follower_pid)
@@ -236,8 +223,9 @@ replace_leader(current_leader, new_leader)
 command(leader, command_arg, timeout \\ 5000, id \\ make_ref)
 query(leader, query_arg, timeout \\ 5000)
 </code></pre>
+
 <ul>
-<li><a href="https://hexdocs.pm/rafted_value/RaftedValue.html">Doc</a></li>
+  <li><a href="https://hexdocs.pm/rafted_value/RaftedValue.html">Doc</a></li>
 </ul>
 
 </section>
@@ -247,25 +235,22 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/rafted_value">rafted_value</a> - Public API design</h3>
 
 <ul>
-<li>
+  <li>
 <code>start_link/2</code>
-
-<ul>
-<li>consensus member process is started in 2 ways:
-
-<ul>
-<li>to become a leader of a newly-created consensus group</li>
-<li>to become a follower of an existing consensus group</li>
-</ul>
-</li>
-<li>in order to avoid race condition of multiple leaders
-
-<ul>
-<li>i.e. "whether a consensus group exists or not" is handled by the caller</li>
-</ul>
-</li>
-</ul>
-</li>
+    <ul>
+      <li>consensus member process is started in 2 ways:
+        <ul>
+          <li>to become a leader of a newly-created consensus group</li>
+          <li>to become a follower of an existing consensus group</li>
+        </ul>
+      </li>
+      <li>in order to avoid race condition of multiple leaders
+        <ul>
+          <li>i.e. “whether a consensus group exists or not” must be handled by the caller</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -275,23 +260,21 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/rafted_value">rafted_value</a> - Implementation detail (1)</h3>
 
 <ul>
-<li>Core component is <a href="https://github.com/skirino/rafted_value/blob/master/lib/rafted_value/server.ex"><code>RaftedValue.Server</code></a> module
-
-<ul>
-<li>a <code>:gen_fsm</code> with 3 states: <code>leader</code>, <code>candidate</code>, <code>follower</code>
+  <li>Core component is <a href="https://github.com/skirino/rafted_value/blob/master/lib/rafted_value/server.ex"><code>RaftedValue.Server</code></a> module
+    <ul>
+      <li>a <code>:gen_fsm</code> with 3 states: <code>leader</code>, <code>candidate</code>, <code>follower</code>
 </li>
-<li>need to handle 17 types of events</li>
-<li>=&gt; 51 handlers to implement</li>
-</ul>
-</li>
-<li>Sane module- and function-level design is the key
-
-<ul>
-<li>unify multiple handlers</li>
-<li>hierarchical process state (nested struct)</li>
-<li>utilities with well-defined responsibilities</li>
-</ul>
-</li>
+      <li>need to handle 17 types of events</li>
+      <li>=&gt; 51 handlers to implement</li>
+    </ul>
+  </li>
+  <li>Sane module- and function-level design is the key
+    <ul>
+      <li>unify multiple handlers</li>
+      <li>hierarchical process state (nested struct)</li>
+      <li>utilities with well-defined responsibilities</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -301,15 +284,14 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/rafted_value">rafted_value</a> - Implementation detail (2)</h3>
 
 <ul>
-<li>For linearizability
-
-<ol>
-<li>assign a unique ID to each command</li>
-<li>responses of command executions are cached</li>
-<li>if cache found for a command, don't execute the command and just returns cached response</li>
-</ol>
-</li>
-<li>This is basically equivalent to implicitly establish client session for each request</li>
+  <li>For linearizability
+    <ol>
+      <li>assign a unique ID to each command</li>
+      <li>responses of command executions are cached</li>
+      <li>if cache found for a command, don’t execute the command and just returns cached response</li>
+    </ol>
+  </li>
+  <li>This is basically equivalent to implicitly establish client session for each request</li>
 </ul>
 
 </section>
@@ -319,15 +301,14 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/rafted_value">rafted_value</a> - Testing (1)</h3>
 
 <ul>
-<li>Really tough</li>
-<li>Strategy:
-
-<ul>
-<li>test processes within a single ErlangVM (give up multi-node tests in this layer)</li>
-<li>tweak inter-process communications to simulate netsplit (using something like DI)</li>
-<li>employ both ordinary <a href="http://elixir-lang.org/docs/stable/ex_unit/ExUnit.html"><code>ExUnit</code></a> tests and property-based tests</li>
-</ul>
-</li>
+  <li>Really tough</li>
+  <li>Strategy:
+    <ul>
+      <li>test processes within a single ErlangVM (give up multi-node tests in this layer)</li>
+      <li>tweak inter-process communications to simulate netsplit (using something like DI)</li>
+      <li>employ both ordinary <a href="http://elixir-lang.org/docs/stable/ex_unit/ExUnit.html"><code>ExUnit</code></a> tests and property-based tests</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -337,14 +318,13 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/rafted_value">rafted_value</a> - Testing (2)</h3>
 
 <ul>
-<li>Property-based tests
-
-<ul>
-<li>under continuous client requests,</li>
-<li>repeatedly change consensus group configurations (add/remove member, replace leader, kill a member, netsplit),</li>
-<li>and see whether all invariants hold or not</li>
-</ul>
-</li>
+  <li>Property-based tests
+    <ul>
+      <li>under continuous client requests,</li>
+      <li>repeatedly change consensus group configurations (add/remove member, replace leader, kill a member, netsplit),</li>
+      <li>and see whether all invariants hold or not</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -354,18 +334,16 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/rafted_value">rafted_value</a> - Testing (3)</h3>
 
 <ul>
-<li>Property-based tests
-
-<ul>
-<li>compared with typical <code>ExUnit</code> tests
-
-<ul>
-<li>much easier to find bugs</li>
-<li>on failure, much harder to understand what's going on</li>
-</ul>
-</li>
-</ul>
-</li>
+  <li>Property-based tests
+    <ul>
+      <li>compared with typical <code>ExUnit</code> tests
+        <ul>
+          <li>much easier to find bugs</li>
+          <li>on test failure, much harder to understand what’s going on</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -375,22 +353,20 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/rafted_value">rafted_value</a> - Testing (4)</h3>
 
 <ul>
-<li>(Rather silly) bugs caught
-
-<ul>
-<li>failed to update struct field
-
-<ul>
-<li>
+  <li>(Rather silly) bugs caught during testing
+    <ul>
+      <li>failed to update struct field
+        <ul>
+          <li>
 <code>%S{f: v}</code> instead of <code>%S{s | f: v}</code>
 </li>
-</ul>
-</li>
-<li>forget to set timer</li>
-<li>off-by-one bug in judging majority</li>
-<li>etc.</li>
-</ul>
-</li>
+        </ul>
+      </li>
+      <li>forget to reset timer</li>
+      <li>off-by-one bug in judging majority</li>
+      <li>etc.</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -403,16 +379,15 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Overview</h3>
 
 <ul>
-<li>Run multiple <code>rafted_value</code> processes within a cluster of ErlangVMs</li>
-<li>For this purpose
-
-<ul>
-<li>defines process naming scheme</li>
-<li>implements process placement algorithm (<a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">randezvous hashing</a>)</li>
-<li>manages consensus on current cluster status (participating nodes, consensus groups)</li>
-<li>automatically re-balance consensus members</li>
-</ul>
-</li>
+  <li>Run multiple <code>rafted_value</code> processes within a cluster of ErlangVMs</li>
+  <li>For this purpose
+    <ul>
+      <li>defines process naming scheme</li>
+      <li>implements process placement algorithm (<a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">randezvous hashing</a>)</li>
+      <li>manages consensus on current cluster status (participating nodes, consensus groups)</li>
+      <li>automatically re-balance consensus members</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -422,15 +397,14 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Process naming scheme</h3>
 
 <ul>
-<li>Use <code>atom</code> as ID of consensus group
-
-<ul>
-<li>consensus group members are registered with the same <code>atom</code>
+  <li>Use <code>atom</code> as ID of consensus group
+    <ul>
+      <li>consensus group members are registered with the same <code>atom</code>
 </li>
-<li>this makes much easier to keep track of where the consensus members reside</li>
-<li>restriction on <code>atom</code> may be relaxed in the future (using flexible process registry such as <a href="https://github.com/uwiger/gproc"><code>gproc</code></a>)</li>
-</ul>
-</li>
+      <li>this makes much easier to keep track of where the consensus members reside</li>
+      <li>restriction on <code>atom</code> may be relaxed in the future (using flexible process registry such as <a href="https://github.com/uwiger/gproc"><code>gproc</code></a>)</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -440,7 +414,7 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Process design (1)</h3>
 
 <ul>
-<li>Basically the same as <a href="https://github.com/basho/riak_ensemble/raw/develop/doc/cluster.png">https://github.com/basho/riak_ensemble/raw/develop/doc/cluster.png</a></li>
+  <li>Basically the same as <a href="https://github.com/basho/riak_ensemble/raw/develop/doc/cluster.png">https://github.com/basho/riak_ensemble/raw/develop/doc/cluster.png</a></li>
 </ul>
 
 </section>
@@ -450,16 +424,15 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Process design (2)</h3>
 
 <ul>
-<li>"cluster consensus group"
-
-<ul>
-<li>manages bookkeeping info of <code>raft_fleet</code>
+  <li>“cluster consensus group”
+    <ul>
+      <li>manages bookkeeping info of <code>raft_fleet</code>
 </li>
-<li>works as a single source of truth; serializes operations to add/remove node/group</li>
-<li>correctly bootstrapping members of cluster consensus group is crucial; use lock facility provided by <a href="http://erlang.org/doc/man/global.html"><code>:global</code></a> module</li>
-</ul>
-</li>
-<li>Other consensus group members are started on demand</li>
+      <li>works as a single source of truth; serializes operations to add/remove node/group</li>
+      <li>correctly bootstrapping members of cluster consensus group is crucial; use lock facility provided by <a href="http://erlang.org/doc/man/global.html"><code>:global</code></a> module</li>
+    </ul>
+  </li>
+  <li>Other consensus group members are started on demand</li>
 </ul>
 
 </section>
@@ -469,33 +442,29 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - <a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">randezvous hashing</a> (1)</h3>
 
 <ul>
-<li>Motivation of the algorithm
-
-<ul>
-<li>want to assign members to each node</li>
-<li>node addition/removal triggers rebalancing
-
-<ul>
-<li>e.g. 4 nodes =&gt; 5 nodes
-
-<ul>
-<li>a: <code>24</code>, b: <code>27</code>, c: <code>23</code>, d: <code>26</code>
+  <li>Motivation of the algorithm
+    <ul>
+      <li>want to assign members to each node</li>
+      <li>node addition/removal triggers rebalancing
+        <ul>
+          <li>e.g. 100 processes in 4 nodes =&gt; 5 nodes
+            <ul>
+              <li>a: <code>24</code>, b: <code>27</code>, c: <code>23</code>, d: <code>26</code>
 </li>
-<li>a: <code>19</code>, b: <code>23</code>, c: <code>18</code>, d: <code>21</code>, e: <code>19</code>
+              <li>a: <code>19</code>, b: <code>23</code>, c: <code>18</code>, d: <code>21</code>, e: <code>19</code>
 </li>
-</ul>
-</li>
-</ul>
-</li>
-<li>don't want to migrate many processes
-
-<ul>
-<li>ideally only <code>1/n_nodes</code> processes to migrate</li>
-</ul>
-</li>
-<li>simply taking <code>mod</code> leads to really bad results</li>
-</ul>
-</li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li>don’t want to migrate many processes
+        <ul>
+          <li>ideally only <code>1/n_nodes</code> processes to migrate</li>
+        </ul>
+      </li>
+      <li>simply taking <code>mod</code> leads to really bad results</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -505,21 +474,19 @@ query(leader, query_arg, timeout \\ 5000)
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - <a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">randezvous hashing</a> (2)</h3>
 
 <ul>
-<li>Algorithm
-
-<ul>
-<li>sort members using "random weight" (hash value)</li>
-<li>take members with least (highest) weights</li>
-</ul>
-</li>
-<li>Compared with <a href="https://en.wikipedia.org/wiki/Consistent_hashing">consistent hashing</a>, randezvous hashing
-
-<ul>
-<li>is much simpler</li>
-<li>naturally integrates data center-aware placement</li>
-<li>is not flexible to tweak hotspot</li>
-</ul>
-</li>
+  <li>Algorithm
+    <ul>
+      <li>sort members using “random weight” (hash value)</li>
+      <li>take members with least (highest) weights</li>
+    </ul>
+  </li>
+  <li>Compared with <a href="https://en.wikipedia.org/wiki/Consistent_hashing">consistent hashing</a>, randezvous hashing
+    <ul>
+      <li>is much simpler</li>
+      <li>naturally integrates data center-aware placement</li>
+      <li>is not flexible to tweak hotspot</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -527,7 +494,8 @@ query(leader, query_arg, timeout \\ 5000)
 
 <h3>
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - <a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">randezvous hashing</a> (3)</h3>
-<pre><code class="ex">defun lrw_members(nodes_per_zone :: %{ZoneInfo.t =&gt; [node]}, group :: atom, n_replica :: pos_integer) :: [node] do
+
+<pre><code class="language-ex">defun lrw_members(nodes_per_zone :: %{ZoneInfo.t =&gt; [node]}, group :: atom, n_replica :: pos_integer) :: [node] do
   Enum.flat_map(nodes_per_zone, fn {_z, ns} -&gt;
     Enum.map(ns, fn n -&gt; {Hash.calc({n, group}), n} end)
     |&gt; Enum.sort
@@ -539,6 +507,7 @@ query(leader, query_arg, timeout \\ 5000)
   |&gt; Enum.take(n_replica)
 end
 </code></pre>
+
 </section>
 <section>
 
@@ -546,20 +515,18 @@ end
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Fault tolerance</h3>
 
 <ul>
-<li>Don't trust remote communication
-
-<ul>
-<li>e.g. spawning a new leader is done locally (without remote communication) as it must be done exactly once</li>
-</ul>
-</li>
-<li>Especially avoid synchronous remote messaging
-
-<ul>
-<li>supervisor API is synchronous</li>
-<li>don't call supervisor APIs from other node; pass information to manager process of the target node and ask it to call</li>
-</ul>
-</li>
-<li>Retry operations that can go wrong...</li>
+  <li>We can’t put trust on remote communications
+    <ul>
+      <li>e.g. spawning a new leader is done locally (without remote communication) as it must be done exactly once</li>
+    </ul>
+  </li>
+  <li>Especially avoid synchronous remote messaging
+    <ul>
+      <li>supervisor API is synchronous</li>
+      <li>don’t call supervisor APIs from other node; pass information to manager process of the target node and ask it to call</li>
+    </ul>
+  </li>
+  <li>Retry operations that can go wrong…</li>
 </ul>
 
 </section>
@@ -569,15 +536,14 @@ end
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Automatic healing</h3>
 
 <ul>
-<li>Run periodic checks of consensus members
-
-<ul>
-<li>add missing member, remove extra member, replace leader with member in the desired node</li>
-<li>to avoid contention, each node manages consensus groups whose leaders are expected to be on that node</li>
-<li>node with too many failing members will be purged</li>
-<li>consensus group with majority failing is removed</li>
-</ul>
-</li>
+  <li>Run periodic checks of consensus members
+    <ul>
+      <li>add missing member, remove extra member, replace leader with member in the desired node</li>
+      <li>to avoid contention, each node manages consensus groups whose leaders are expected to be on that node</li>
+      <li>node with too many failing members will be purged</li>
+      <li>consensus group with majority failing is removed (as a last resort)</li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -585,7 +551,8 @@ end
 
 <h3>
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Public API</h3>
-<pre><code class="ex">activate(zone)
+
+<pre><code class="language-ex">activate(zone)
 deactivate()
 add_consensus_group(name, n_replica, rv_config)
 remove_consensus_group(name)
@@ -594,8 +561,9 @@ consensus_groups()
 command(name, command_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
 query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
 </code></pre>
+
 <ul>
-<li><a href="https://hexdocs.pm/raft_fleet/RaftFleet.html">Doc</a></li>
+  <li><a href="https://hexdocs.pm/raft_fleet/RaftFleet.html">Doc</a></li>
 </ul>
 
 </section>
@@ -605,27 +573,24 @@ query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Testing (1)</h3>
 
 <ul>
-<li>Extremely daunting</li>
-<li>Strategy:
-
-<ul>
-<li>use <a href="http://erlang.org/doc/man/slave.html"><code>:slave</code></a> module and test against multiple local nodes
-
-<ul>
-<li>long-running tests...</li>
-</ul>
-</li>
-<li>test that
-
-<ul>
-<li>starting with various node configurations</li>
-<li>under continuous client requests</li>
-<li>change node configuration (add/remove/kill node)</li>
-<li>and (after some time) see that consensus members are (roughly) evenly distributed across nodes</li>
-</ul>
-</li>
-</ul>
-</li>
+  <li>Extremely daunting</li>
+  <li>Strategy:
+    <ul>
+      <li>use <a href="http://erlang.org/doc/man/slave.html"><code>:slave</code></a> module and test against multiple local nodes
+        <ul>
+          <li>long-running tests…</li>
+        </ul>
+      </li>
+      <li>test that
+        <ul>
+          <li>starting with various node configurations</li>
+          <li>under continuous client requests</li>
+          <li>change node configuration (add/remove/kill node)</li>
+          <li>and (after some time) see that consensus members are (roughly) evenly distributed across nodes</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -635,14 +600,37 @@ query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Testing (2)</h3>
 
 <ul>
-<li>Bugs caught (really difficult to find)
+  <li>Bugs caught during testing (really difficult to find)
+    <ul>
+      <li>node-to-node connections are propagated asynchronously; cannot acquire global lock for cluster consensus before they completely propagate</li>
+      <li>deadlock due to multiple followers calling each other</li>
+    </ul>
+  </li>
+  <li>Explicitly clearing up all resources (node, process, ETS) for each test is crucial…</li>
+</ul>
+
+</section>
+<section>
+
+<h3>
+<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Testing (3)</h3>
 
 <ul>
-<li>node-to-node connections are propagated asynchronously; cannot acquire global lock for cluster consensus before they completely propagate</li>
-<li>deadlock due to multiple followers calling each other</li>
-</ul>
-</li>
-<li>Explicitly clearing up all resources (node, process, ETS) for each test is crucial...</li>
+  <li>Bugs caught in dev/prod environment
+    <ul>
+      <li>Sending messages to an already-deleted node takes really long (more than a few seconds), resulting in leader election timeout
+        <ul>
+          <li>
+<code>:noconnect</code> option of <code>:erlang.send/2</code> is crucial here</li>
+        </ul>
+      </li>
+      <li>Race condition between node deactivation and leader migration: assigning a process in soon-to-be-deleted node as the next leader
+        <ul>
+          <li>Properly check node status before choosing the next leader</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
 </ul>
 
 </section>
@@ -654,8 +642,8 @@ query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
 <h3>Summary</h3>
 
 <ul>
-<li>Process programming in Erlang/Elixir is fun</li>
-<li>Proper separation of concerns and thorough testing in each layer are the only way to keep our sanity</li>
+  <li>Process programming in Erlang/Elixir is fun</li>
+  <li>Proper separation of concerns and thorough testing in each layer are the only way to keep our sanity!</li>
 </ul>
 
 </section>

@@ -18,9 +18,9 @@
 ### Motivation
 
 - Even armed with abstractions provided by Erlang and Elixir, it's still hard to manipulate just a single "state" within a cluster
-    - Actually we want multiple instances of such "state"s
+    - And actually we want multiple instances of such "state"s
 - That's because we need to
-    - replicate data to multiple nodes for high availability
+    - replicate data within multiple nodes for high availability
     - determine leader from replicas to serialize client requests
     - migrate a process from a node to another node (while processing client requests) for operational reasons
     - load-balance tasks (processes) withing nodes
@@ -31,21 +31,20 @@
 
 - Host multiple "state"s within a cluster
     - Automatic load-balancing, reasonably scalable
-- Support of [Linearizable](https://en.wikipedia.org/wiki/Linearizability) operations
+- Support [Linearizable](https://en.wikipedia.org/wiki/Linearizability) semantics for operations
     - i.e. client operations on a "state" are processed atomically in the issued order
     - also we don't want
         - to lose any acknowledged writes
         - to have duplicated writes due to client retry
 
-
 ---
 
 ### Requirements (2)
 
-- Fault tolerance for minority of consensus group members
+- Tolerate failures of minority of consensus group members
     - tolerance for DC-failure is also nice to have
-- Automatic recovery from non-critical node failure
-- No persistence is needed (for our usage)
+- Automatically recover from non-critical node failure
+- (no persistence is needed)
 
 ---
 
@@ -54,8 +53,8 @@
 - Use [Raft consensus algorithm](https://raft.github.io/)
 - Divide Raft implementation and other parts as separate libs
     - for clear separation of concerns
-        - `rafted_value`: Raft implementation
-        - `raft_fleet`: Running multiple consensus groups within a cluster
+        - [`rafted_value`](https://github.com/skirino/rafted_value): Raft protocol implementation
+        - [`raft_fleet`](https://github.com/skirino/raft_fleet): Running and managing multiple consensus groups in a cluster
 
 ---
 
@@ -87,7 +86,7 @@
 - Each Raft member as a [`:gen_fsm`](http://erlang.org/doc/man/gen_fsm.html) process
     - in retrospect [`:gen_server`](http://erlang.org/doc/man/gen_server.html) is also OK
 - Each command is enforced to be pure
-    - minimal information is included in Raft logs
+    - so that only minimal information is included in Raft logs
 
 ---
 
@@ -114,7 +113,7 @@ query(leader, query_arg, timeout \\ 5000)
         - to become a leader of a newly-created consensus group
         - to become a follower of an existing consensus group
     - in order to avoid race condition of multiple leaders
-        - i.e. "whether a consensus group exists or not" is handled by the caller
+        - i.e. "whether a consensus group exists or not" must be handled by the caller
 
 ---
 
@@ -165,16 +164,16 @@ query(leader, query_arg, timeout \\ 5000)
 - Property-based tests
     - compared with typical `ExUnit` tests
         - much easier to find bugs
-        - on failure, much harder to understand what's going on
+        - on test failure, much harder to understand what's going on
 
 ---
 
 ### [rafted_value](https://github.com/skirino/rafted_value) - Testing (4)
 
-- (Rather silly) bugs caught
+- (Rather silly) bugs caught during testing
     - failed to update struct field
         - `%S{f: v}` instead of `%S{s | f: v}`
-    - forget to set timer
+    - forget to reset timer
     - off-by-one bug in judging majority
     - etc.
 
@@ -222,7 +221,7 @@ query(leader, query_arg, timeout \\ 5000)
 - Motivation of the algorithm
     - want to assign members to each node
     - node addition/removal triggers rebalancing
-        - e.g. 4 nodes => 5 nodes
+        - e.g. 100 processes in 4 nodes => 5 nodes
             - a: `24`, b: `27`, c: `23`, d: `26`
             - a: `19`, b: `23`, c: `18`, d: `21`, e: `19`
     - don't want to migrate many processes
@@ -263,7 +262,7 @@ end
 
 ### [raft_fleet](https://github.com/skirino/raft_fleet) - Fault tolerance
 
-- Don't trust remote communication
+- We can't put trust on remote communications
     - e.g. spawning a new leader is done locally (without remote communication) as it must be done exactly once
 - Especially avoid synchronous remote messaging
     - supervisor API is synchronous
@@ -278,7 +277,7 @@ end
     - add missing member, remove extra member, replace leader with member in the desired node
     - to avoid contention, each node manages consensus groups whose leaders are expected to be on that node
     - node with too many failing members will be purged
-    - consensus group with majority failing is removed
+    - consensus group with majority failing is removed (as a last resort)
 
 ---
 
@@ -315,10 +314,20 @@ query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
 
 ### [raft_fleet](https://github.com/skirino/raft_fleet) - Testing (2)
 
-- Bugs caught (really difficult to find)
+- Bugs caught during testing (really difficult to find)
     - node-to-node connections are propagated asynchronously; cannot acquire global lock for cluster consensus before they completely propagate
     - deadlock due to multiple followers calling each other
 - Explicitly clearing up all resources (node, process, ETS) for each test is crucial...
+
+---
+
+### [raft_fleet](https://github.com/skirino/raft_fleet) - Testing (3)
+
+- Bugs caught in dev/prod environment
+    - Sending messages to an already-deleted node takes really long (more than a few seconds), resulting in leader election timeout
+        - `:noconnect` option of `:erlang.send/2` is crucial here
+    - Race condition between node deactivation and leader migration: assigning a process in soon-to-be-deleted node as the next leader
+        - Properly check node status before choosing the next leader
 
 ***
 ***
@@ -326,4 +335,4 @@ query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
 ### Summary
 
 - Process programming in Erlang/Elixir is fun
-- Proper separation of concerns and thorough testing in each layer are the only way to keep our sanity
+- Proper separation of concerns and thorough testing in each layer are the only way to keep our sanity!
