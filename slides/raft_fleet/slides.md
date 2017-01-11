@@ -2,28 +2,34 @@
 
 桐野 俊輔 ([skirino](https://github.com/skirino)) @ [ACCESS](http://jp.access-company.com/)
 
-2016/7/20
+2017/01/11
 
 ***
 
-### Motivation
+### Motivation (1)
 
-- Erlang and Elixir : much higher-level than many other languages
-    - most of low-level things are abstracted away
-        - processes and mailboxes as building blocks
+- Erlang/Elixir: much higher-level than many other languages
+    - most of low-level stuff is abstracted away
+        - processes with mailboxes as building blocks
         - dead simple node-to-node communication (location transparency)
 
 ---
 
-### Motivation
+### Motivation (2)
 
-- Even armed with abstractions provided by Erlang and Elixir, it's still hard to manipulate just a single "state" within a cluster
+- Even armed with Erlang/Elixir, it's still hard to manipulate "state" within a cluster of nodes
     - And actually we want multiple instances of such "state"s
-- That's because we need to
-    - replicate data within multiple nodes for high availability
-    - determine leader from replicas to serialize client requests
-    - migrate a process from a node to another node (while processing client requests) for operational reasons
-    - load-balance tasks (processes) withing nodes
+
+---
+
+### Motivation (3)
+
+- That's because we need
+    - data replication within multiple nodes
+    - leader election mechanism (or something similar) to serialize client requests
+        - and failover of a failed leader
+    - process migration from a node to another (while processing client requests) for e.g. deployment
+    - load-balancing of tasks (processes) within nodes
 
 ---
 
@@ -31,11 +37,11 @@
 
 - Host multiple "state"s within a cluster
     - Automatic load-balancing, reasonably scalable
-- Support [Linearizable](https://en.wikipedia.org/wiki/Linearizability) semantics for operations
+- Support [Linearizable](https://en.wikipedia.org/wiki/Linearizability) semantics
     - i.e. client operations on a "state" are processed atomically in the issued order
-    - also we don't want
-        - to lose any acknowledged writes
-        - to have duplicated writes due to client retry
+    - also we don't want to
+        - lose any acknowledged writes
+        - have duplicated writes due to client retry
 
 ---
 
@@ -44,14 +50,14 @@
 - Tolerate failures of minority of consensus group members
     - tolerance for DC-failure is also nice to have
 - Automatically recover from non-critical node failure
-- (no persistence is needed)
+- (no persistence is needed for our purpose)
 
 ---
 
 ### Basic design
 
 - Use [Raft consensus algorithm](https://raft.github.io/)
-- Divide Raft implementation and other parts as separate libs
+- Divide Raft protocol implementation and other parts as separate libs
     - for clear separation of concerns
         - [`rafted_value`](https://github.com/skirino/rafted_value): Raft protocol implementation
         - [`raft_fleet`](https://github.com/skirino/raft_fleet): Running and managing multiple consensus groups in a cluster
@@ -70,7 +76,7 @@
 ### Related works (2)
 
 - Basho's [riak_ensemble](https://github.com/basho/riak_ensemble)
-    - built for similar goal (CAS for Riak)
+    - built for similar goal (CAS in Riak)
     - (an improved variant of) Paxos consensus algorithm
     - specialized to key-value operations
     - basically a part of Riak, not a standalone lib
@@ -80,29 +86,13 @@
 
 ### [rafted_value](https://github.com/skirino/rafted_value) - Overview
 
-- Raft protocol implementation
+- Raft protocol implementation, including membership changes
 - Raft logs are not persisted
-- Supports membership changes
 - Each Raft member as a [`:gen_fsm`](http://erlang.org/doc/man/gen_fsm.html) process
-    - in retrospect [`:gen_server`](http://erlang.org/doc/man/gen_server.html) is also OK
-- Each command is enforced to be pure
-    - so that only minimal information is included in Raft logs
-
----
-
-### [rafted_value](https://github.com/skirino/rafted_value) - Public API
-
-```ex
-start_link(info, name_or_nil \\ nil)
-make_config(data_module, opts \\ [])
-status(server)
-remove_follower(leader, follower_pid)
-replace_leader(current_leader, new_leader)
-command(leader, command_arg, timeout \\ 5000, id \\ make_ref)
-query(leader, query_arg, timeout \\ 5000)
-```
-
-- [Doc](https://hexdocs.pm/rafted_value/RaftedValue.html)
+    - in retrospect [`:gen_server`](http://erlang.org/doc/man/gen_server.html) would also be OK
+- Commands must be pure
+    - only minimal information is included in Raft logs
+    - impure operations can be done in `LeaderHook` callbacks
 
 ---
 
@@ -135,7 +125,7 @@ query(leader, query_arg, timeout \\ 5000)
 - For linearizability
     1. assign a unique ID to each command
     2. responses of command executions are cached
-    3. if cache found for a command, don't execute the command and just returns cached response
+    3. if cache found for a command, don't execute the command and just return the cached response
 - This is basically equivalent to implicitly establish client session for each request
 
 ---
@@ -164,14 +154,14 @@ query(leader, query_arg, timeout \\ 5000)
 - Property-based tests
     - compared with typical `ExUnit` tests
         - much easier to find bugs
-        - on test failure, much harder to understand what's going on
+        - on failure, much harder to understand what's going on
 
 ---
 
 ### [rafted_value](https://github.com/skirino/rafted_value) - Testing (4)
 
 - (Rather silly) bugs caught during testing
-    - failed to update struct field
+    - failed to keep struct fields
         - `%S{f: v}` instead of `%S{s | f: v}`
     - forget to reset timer
     - off-by-one bug in judging majority
@@ -183,11 +173,12 @@ query(leader, query_arg, timeout \\ 5000)
 ### [raft_fleet](https://github.com/skirino/raft_fleet) - Overview
 
 - Run multiple `rafted_value` processes within a cluster of ErlangVMs
-- For this purpose
+- For this purpose, `raft_fleet`
     - defines process naming scheme
     - implements process placement algorithm ([randezvous hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing))
     - manages consensus on current cluster status (participating nodes, consensus groups)
     - automatically re-balance consensus members
+- Users of `raft_fleet` define "state" and operations on it by implementing [`RaftedValue.Data`](https://hexdocs.pm/rafted_value/RaftedValue.Data.html) behaviour
 
 ---
 
@@ -196,7 +187,7 @@ query(leader, query_arg, timeout \\ 5000)
 - Use `atom` as ID of consensus group
     - consensus group members are registered with the same `atom`
     - this makes much easier to keep track of where the consensus members reside
-    - restriction on `atom` may be relaxed in the future (using flexible process registry such as [`gproc`](https://github.com/uwiger/gproc))
+    - `atom`-only restriction may be relaxed in future releases
 
 ---
 
@@ -226,7 +217,7 @@ query(leader, query_arg, timeout \\ 5000)
             - a: `19`, b: `23`, c: `18`, d: `21`, e: `19`
     - don't want to migrate many processes
         - ideally only `1/n_nodes` processes to migrate
-    - simply taking `mod` leads to really bad results
+        - simply taking `mod` leads to really bad results
 
 ---
 
@@ -238,7 +229,7 @@ query(leader, query_arg, timeout \\ 5000)
 - Compared with [consistent hashing](https://en.wikipedia.org/wiki/Consistent_hashing), randezvous hashing
     - is much simpler
     - naturally integrates data center-aware placement
-    - is not flexible to tweak hotspot
+    - is not flexible to tweak hotspot (in the case of e.g. key-value store)
 
 ---
 
@@ -281,23 +272,6 @@ end
 
 ---
 
-### [raft_fleet](https://github.com/skirino/raft_fleet) - Public API
-
-```ex
-activate(zone)
-deactivate()
-add_consensus_group(name, n_replica, rv_config)
-remove_consensus_group(name)
-active_nodes()
-consensus_groups()
-command(name, command_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
-query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
-```
-
-- [Doc](https://hexdocs.pm/raft_fleet/RaftFleet.html)
-
----
-
 ### [raft_fleet](https://github.com/skirino/raft_fleet) - Testing (1)
 
 - Extremely daunting
@@ -319,13 +293,44 @@ query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
     - deadlock due to multiple followers calling each other
 - Explicitly clearing up all resources (node, process, ETS) for each test is crucial...
 
+***
+***
+
+### [raft_fleet](https://github.com/skirino/raft_fleet) in action (1)
+
+- We have used `raft_fleet` to implement job queues
+    - only in-memory
+    - push-based; avoid excessive polling
+
 ---
 
-### [raft_fleet](https://github.com/skirino/raft_fleet) - Testing (3)
+### [raft_fleet](https://github.com/skirino/raft_fleet) in action (2)
+
+- On adding a node to working cluster:
+    - Call `RaftFleet.activate/1` in `SomeApp.start/2`
+    - The node starts to host member processes of existing consensus groups
+
+---
+
+### [raft_fleet](https://github.com/skirino/raft_fleet) in action (3)
+
+- On removing a node from working cluster:
+    - Call `RaftFleet.deactivate/0` before terminating ErlangVM and wait for a while
+    - Member processes in the target node will be migrated to the remaining nodes
+
+---
+
+### [raft_fleet](https://github.com/skirino/raft_fleet) in action (4)
 
 - Bugs caught in dev/prod environment
     - Sending messages to an already-deleted node takes really long (more than a few seconds), resulting in leader election timeout
-        - `:noconnect` option of `:erlang.send/2` is crucial here
+        - `:noconnect` option of `:erlang.send/3` is crucial here
+
+---
+
+### [raft_fleet](https://github.com/skirino/raft_fleet) in action (5)
+
+- Bugs caught in dev/prod environment
     - Race condition between node deactivation and leader migration: assigning a process in soon-to-be-deleted node as the next leader
         - Properly check node status before choosing the next leader
 
@@ -334,5 +339,6 @@ query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
 
 ### Summary
 
-- Process programming in Erlang/Elixir is fun
-- Proper separation of concerns and thorough testing in each layer are the only way to keep our sanity!
+- `raft_fleet` makes cluster-wide "state"s much easier
+- Proper separation of concerns and thorough testing in each layer are the only way to keep our sanity
+- Comments/feedbacks/PRs are more than welcome!

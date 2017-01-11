@@ -49,20 +49,20 @@
 
 <p>桐野 俊輔 (<a href="https://github.com/skirino">skirino</a>) @ <a href="http://jp.access-company.com/">ACCESS</a></p>
 
-<p>2016/7/20</p>
+<p>2017/01/11</p>
 
 </section>
 <section>
 <section>
 
-<h3>Motivation</h3>
+<h3>Motivation (1)</h3>
 
 <ul>
-  <li>Erlang and Elixir : much higher-level than many other languages
+  <li>Erlang/Elixir: much higher-level than many other languages
     <ul>
-      <li>most of low-level things are abstracted away
+      <li>most of low-level stuff is abstracted away
         <ul>
-          <li>processes and mailboxes as building blocks</li>
+          <li>processes with mailboxes as building blocks</li>
           <li>dead simple node-to-node communication (location transparency)</li>
         </ul>
       </li>
@@ -73,20 +73,32 @@
 </section>
 <section>
 
-<h3>Motivation</h3>
+<h3>Motivation (2)</h3>
 
 <ul>
-  <li>Even armed with abstractions provided by Erlang and Elixir, it’s still hard to manipulate just a single “state” within a cluster
+  <li>Even armed with Erlang/Elixir, it’s still hard to manipulate “state” within a cluster of nodes
     <ul>
       <li>And actually we want multiple instances of such “state”s</li>
     </ul>
   </li>
-  <li>That’s because we need to
+</ul>
+
+</section>
+<section>
+
+<h3>Motivation (3)</h3>
+
+<ul>
+  <li>That’s because we need
     <ul>
-      <li>replicate data within multiple nodes for high availability</li>
-      <li>determine leader from replicas to serialize client requests</li>
-      <li>migrate a process from a node to another node (while processing client requests) for operational reasons</li>
-      <li>load-balance tasks (processes) withing nodes</li>
+      <li>data replication within multiple nodes</li>
+      <li>leader election mechanism (or something similar) to serialize client requests
+        <ul>
+          <li>and failover of a failed leader</li>
+        </ul>
+      </li>
+      <li>process migration from a node to another (while processing client requests) for e.g. deployment</li>
+      <li>load-balancing of tasks (processes) within nodes</li>
     </ul>
   </li>
 </ul>
@@ -102,13 +114,13 @@
       <li>Automatic load-balancing, reasonably scalable</li>
     </ul>
   </li>
-  <li>Support <a href="https://en.wikipedia.org/wiki/Linearizability">Linearizable</a> semantics for operations
+  <li>Support <a href="https://en.wikipedia.org/wiki/Linearizability">Linearizable</a> semantics
     <ul>
       <li>i.e. client operations on a “state” are processed atomically in the issued order</li>
-      <li>also we don’t want
+      <li>also we don’t want to
         <ul>
-          <li>to lose any acknowledged writes</li>
-          <li>to have duplicated writes due to client retry</li>
+          <li>lose any acknowledged writes</li>
+          <li>have duplicated writes due to client retry</li>
         </ul>
       </li>
     </ul>
@@ -127,7 +139,7 @@
     </ul>
   </li>
   <li>Automatically recover from non-critical node failure</li>
-  <li>(no persistence is needed)</li>
+  <li>(no persistence is needed for our purpose)</li>
 </ul>
 
 </section>
@@ -138,7 +150,7 @@
 <ul>
   <li>Use <a href="https://raft.github.io/">Raft consensus algorithm</a>
 </li>
-  <li>Divide Raft implementation and other parts as separate libs
+  <li>Divide Raft protocol implementation and other parts as separate libs
     <ul>
       <li>for clear separation of concerns
         <ul>
@@ -176,7 +188,7 @@
 <ul>
   <li>Basho’s <a href="https://github.com/basho/riak_ensemble">riak_ensemble</a>
     <ul>
-      <li>built for similar goal (CAS for Riak)</li>
+      <li>built for similar goal (CAS in Riak)</li>
       <li>(an improved variant of) Paxos consensus algorithm</li>
       <li>specialized to key-value operations</li>
       <li>basically a part of Riak, not a standalone lib</li>
@@ -194,38 +206,19 @@
 <a href="https://github.com/skirino/rafted_value">rafted_value</a> - Overview</h3>
 
 <ul>
-  <li>Raft protocol implementation</li>
+  <li>Raft protocol implementation, including membership changes</li>
   <li>Raft logs are not persisted</li>
-  <li>Supports membership changes</li>
   <li>Each Raft member as a <a href="http://erlang.org/doc/man/gen_fsm.html"><code>:gen_fsm</code></a> process
     <ul>
-      <li>in retrospect <a href="http://erlang.org/doc/man/gen_server.html"><code>:gen_server</code></a> is also OK</li>
+      <li>in retrospect <a href="http://erlang.org/doc/man/gen_server.html"><code>:gen_server</code></a> would also be OK</li>
     </ul>
   </li>
-  <li>Each command is enforced to be pure
+  <li>Commands must be pure
     <ul>
-      <li>so that only minimal information is included in Raft logs</li>
+      <li>only minimal information is included in Raft logs</li>
+      <li>impure operations can be done in <code>LeaderHook</code> callbacks</li>
     </ul>
   </li>
-</ul>
-
-</section>
-<section>
-
-<h3>
-<a href="https://github.com/skirino/rafted_value">rafted_value</a> - Public API</h3>
-
-<pre><code class="language-ex">start_link(info, name_or_nil \\ nil)
-make_config(data_module, opts \\ [])
-status(server)
-remove_follower(leader, follower_pid)
-replace_leader(current_leader, new_leader)
-command(leader, command_arg, timeout \\ 5000, id \\ make_ref)
-query(leader, query_arg, timeout \\ 5000)
-</code></pre>
-
-<ul>
-  <li><a href="https://hexdocs.pm/rafted_value/RaftedValue.html">Doc</a></li>
 </ul>
 
 </section>
@@ -288,7 +281,7 @@ query(leader, query_arg, timeout \\ 5000)
     <ol>
       <li>assign a unique ID to each command</li>
       <li>responses of command executions are cached</li>
-      <li>if cache found for a command, don’t execute the command and just returns cached response</li>
+      <li>if cache found for a command, don’t execute the command and just return the cached response</li>
     </ol>
   </li>
   <li>This is basically equivalent to implicitly establish client session for each request</li>
@@ -339,7 +332,7 @@ query(leader, query_arg, timeout \\ 5000)
       <li>compared with typical <code>ExUnit</code> tests
         <ul>
           <li>much easier to find bugs</li>
-          <li>on test failure, much harder to understand what’s going on</li>
+          <li>on failure, much harder to understand what’s going on</li>
         </ul>
       </li>
     </ul>
@@ -355,7 +348,7 @@ query(leader, query_arg, timeout \\ 5000)
 <ul>
   <li>(Rather silly) bugs caught during testing
     <ul>
-      <li>failed to update struct field
+      <li>failed to keep struct fields
         <ul>
           <li>
 <code>%S{f: v}</code> instead of <code>%S{s | f: v}</code>
@@ -380,7 +373,7 @@ query(leader, query_arg, timeout \\ 5000)
 
 <ul>
   <li>Run multiple <code>rafted_value</code> processes within a cluster of ErlangVMs</li>
-  <li>For this purpose
+  <li>For this purpose, <code>raft_fleet</code>
     <ul>
       <li>defines process naming scheme</li>
       <li>implements process placement algorithm (<a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">randezvous hashing</a>)</li>
@@ -388,6 +381,7 @@ query(leader, query_arg, timeout \\ 5000)
       <li>automatically re-balance consensus members</li>
     </ul>
   </li>
+  <li>Users of <code>raft_fleet</code> define “state” and operations on it by implementing <a href="https://hexdocs.pm/rafted_value/RaftedValue.Data.html"><code>RaftedValue.Data</code></a> behaviour</li>
 </ul>
 
 </section>
@@ -402,7 +396,8 @@ query(leader, query_arg, timeout \\ 5000)
       <li>consensus group members are registered with the same <code>atom</code>
 </li>
       <li>this makes much easier to keep track of where the consensus members reside</li>
-      <li>restriction on <code>atom</code> may be relaxed in the future (using flexible process registry such as <a href="https://github.com/uwiger/gproc"><code>gproc</code></a>)</li>
+      <li>
+<code>atom</code>-only restriction may be relaxed in future releases</li>
     </ul>
   </li>
 </ul>
@@ -460,9 +455,9 @@ query(leader, query_arg, timeout \\ 5000)
       <li>don’t want to migrate many processes
         <ul>
           <li>ideally only <code>1/n_nodes</code> processes to migrate</li>
+          <li>simply taking <code>mod</code> leads to really bad results</li>
         </ul>
       </li>
-      <li>simply taking <code>mod</code> leads to really bad results</li>
     </ul>
   </li>
 </ul>
@@ -484,7 +479,7 @@ query(leader, query_arg, timeout \\ 5000)
     <ul>
       <li>is much simpler</li>
       <li>naturally integrates data center-aware placement</li>
-      <li>is not flexible to tweak hotspot</li>
+      <li>is not flexible to tweak hotspot (in the case of e.g. key-value store)</li>
     </ul>
   </li>
 </ul>
@@ -550,26 +545,6 @@ end
 <section>
 
 <h3>
-<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Public API</h3>
-
-<pre><code class="language-ex">activate(zone)
-deactivate()
-add_consensus_group(name, n_replica, rv_config)
-remove_consensus_group(name)
-active_nodes()
-consensus_groups()
-command(name, command_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
-query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
-</code></pre>
-
-<ul>
-  <li><a href="https://hexdocs.pm/raft_fleet/RaftFleet.html">Doc</a></li>
-</ul>
-
-</section>
-<section>
-
-<h3>
 <a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Testing (1)</h3>
 
 <ul>
@@ -610,10 +585,59 @@ query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
 </ul>
 
 </section>
+</section>
+
+<section>
 <section>
 
 <h3>
-<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - Testing (3)</h3>
+<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> in action (1)</h3>
+
+<ul>
+  <li>We have used <code>raft_fleet</code> to implement job queues
+    <ul>
+      <li>only in-memory</li>
+      <li>push-based; avoid excessive polling</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>
+<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> in action (2)</h3>
+
+<ul>
+  <li>On adding a node to working cluster:
+    <ul>
+      <li>Call <code>RaftFleet.activate/1</code> in <code>SomeApp.start/2</code>
+</li>
+      <li>The node starts to host member processes of existing consensus groups</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>
+<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> in action (3)</h3>
+
+<ul>
+  <li>On removing a node from working cluster:
+    <ul>
+      <li>Call <code>RaftFleet.deactivate/0</code> before terminating ErlangVM and wait for a while</li>
+      <li>Member processes in the target node will be migrated to the remaining nodes</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>
+<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> in action (4)</h3>
 
 <ul>
   <li>Bugs caught in dev/prod environment
@@ -621,9 +645,22 @@ query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
       <li>Sending messages to an already-deleted node takes really long (more than a few seconds), resulting in leader election timeout
         <ul>
           <li>
-<code>:noconnect</code> option of <code>:erlang.send/2</code> is crucial here</li>
+<code>:noconnect</code> option of <code>:erlang.send/3</code> is crucial here</li>
         </ul>
       </li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>
+<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> in action (5)</h3>
+
+<ul>
+  <li>Bugs caught in dev/prod environment
+    <ul>
       <li>Race condition between node deactivation and leader migration: assigning a process in soon-to-be-deleted node as the next leader
         <ul>
           <li>Properly check node status before choosing the next leader</li>
@@ -642,8 +679,10 @@ query(name, query_arg, timeout \\ 500, retry \\ 3, retry_interval \\ 1000)
 <h3>Summary</h3>
 
 <ul>
-  <li>Process programming in Erlang/Elixir is fun</li>
-  <li>Proper separation of concerns and thorough testing in each layer are the only way to keep our sanity!</li>
+  <li>
+<code>raft_fleet</code> makes cluster-wide “state”s much easier</li>
+  <li>Proper separation of concerns and thorough testing in each layer are the only way to keep our sanity</li>
+  <li>Comments/feedbacks/PRs are more than welcome!</li>
 </ul>
 
 </section>
