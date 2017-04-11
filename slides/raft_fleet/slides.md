@@ -51,6 +51,7 @@
     - tolerance for DC-failure is also nice to have
 - Automatically recover from non-critical node failure
 - (no persistence is needed for our purpose)
+- Provide flexible data model for "state"s
 
 ---
 
@@ -87,9 +88,10 @@
 ### [rafted_value](https://github.com/skirino/rafted_value) - Overview
 
 - Raft protocol implementation, including membership changes
-- Raft logs are not persisted
-- Each Raft member as a [`:gen_fsm`](http://erlang.org/doc/man/gen_fsm.html) process
-    - in retrospect [`:gen_server`](http://erlang.org/doc/man/gen_server.html) would also be OK
+    - Raft logs are not persisted
+    - Each Raft member as a [`:gen_fsm`](http://erlang.org/doc/man/gen_fsm.html) process
+        - in retrospect [`:gen_server`](http://erlang.org/doc/man/gen_server.html) would also be OK
+- Arbitrary data structure can be replicated among members
 - Commands must be pure
     - only minimal information is included in Raft logs
     - impure operations can be done in `LeaderHook` callbacks

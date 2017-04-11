@@ -140,6 +140,7 @@
   </li>
   <li>Automatically recover from non-critical node failure</li>
   <li>(no persistence is needed for our purpose)</li>
+  <li>Provide flexible data model for “state”s</li>
 </ul>
 
 </section>
@@ -206,13 +207,17 @@
 <a href="https://github.com/skirino/rafted_value">rafted_value</a> - Overview</h3>
 
 <ul>
-  <li>Raft protocol implementation, including membership changes</li>
-  <li>Raft logs are not persisted</li>
-  <li>Each Raft member as a <a href="http://erlang.org/doc/man/gen_fsm.html"><code>:gen_fsm</code></a> process
+  <li>Raft protocol implementation, including membership changes
     <ul>
-      <li>in retrospect <a href="http://erlang.org/doc/man/gen_server.html"><code>:gen_server</code></a> would also be OK</li>
+      <li>Raft logs are not persisted</li>
+      <li>Each Raft member as a <a href="http://erlang.org/doc/man/gen_fsm.html"><code>:gen_fsm</code></a> process
+        <ul>
+          <li>in retrospect <a href="http://erlang.org/doc/man/gen_server.html"><code>:gen_server</code></a> would also be OK</li>
+        </ul>
+      </li>
     </ul>
   </li>
+  <li>Arbitrary data structure can be replicated among members</li>
   <li>Commands must be pure
     <ul>
       <li>only minimal information is included in Raft logs</li>
