@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+<title>Transactional Information Systems</title>
+
+<meta name="description" content="">
+<meta name="author" content="Shunsuke Kirino">
+<meta name="generator" content="reveal-ck 3.5.1">
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h2>Transactional Information Systems</h2>
+
+<p>桐野 俊輔(<a href="https://github.com/skirino">skirino</a>)</p>
+
+</section>
+<section>
+<section>
+
+<h2>長く険しい戦いであった</h2>
+
+<p><a href="https://www.amazon.co.jp/gp/product/1558605088/ref=oh_aui_detailpage_o03_s00?ie=UTF8&amp;psc=1"><img src="images/cover.jpg" width="40%"></a></p>
+
+</section>
+<section>
+
+<h2>読もうと思ったモチベーション</h2>
+
+<ul>
+  <li>DBはビジネス上の重要性に対して理解してなさすぎ
+    <ul>
+      <li>意識しなくてもそれなりに仕事になるのはスバラシイという言い方もできる</li>
+      <li>が、”それなり”止まり</li>
+    </ul>
+  </li>
+  <li>中でもトランザクション関係は(個人的に)謎に包まれている</li>
+</ul>
+
+</section>
+<section>
+
+<h2>おことわり</h2>
+
+<ul>
+  <li>わかってないところも(当然、いっぱい)ある。ツッコミ歓迎</li>
+  <li>このスライドをself-containedにするつもりはほぼなくて、話の材料のリンク集程度</li>
+  <li>
+<a href="http://qiita.com/advent-calendar/2016/transaction">一人トランザクション技術 by @kumagiさん</a>が驚異的にまとまってる。そっち見たほうがいい</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2><a href="http://qiita.com/kumagi/items/5262ff4551ba19943b70">トランザクションとは</a></h2>
+
+<ul>
+  <li>データに対する1つ以上の処理をまとめたもの</li>
+  <li>トランザクションが”いい感じに”実行されてほしい
+    <ul>
+      <li>他の処理と”かち合わない”、操作が失われない、… =&gt; ACID</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>
+<a href="http://qiita.com/kumagi/items/e93a57535db04e66368f">ACID</a> : Atomic</h2>
+
+<ul>
+  <li>トランザクション実行の<strong>結果</strong>がall or nothingになること
+    <ul>
+      <li>一部のデータだけ更新されたりしない</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>
+<a href="http://qiita.com/kumagi/items/e93a57535db04e66368f">ACID</a> : Consistent</h2>
+
+<ul>
+  <li>予め定められたconstraintsを逸脱するトランザクションはコミットされない
+    <ul>
+      <li>NOT NULL等。製品によって課せる制約にかなりバラつきがある</li>
+      <li>CAP定理のCとは別物</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>
+<a href="http://qiita.com/kumagi/items/e93a57535db04e66368f">ACID</a> : Isolated</h2>
+
+<ul>
+  <li>トランザクション実行の<strong>過程</strong>が他に影響を与えない
+    <ul>
+      <li>書き込みがコミットされる前に読めてはマズい、等</li>
+    </ul>
+  </li>
+  <li>実際は<a href="http://qiita.com/kumagi/items/1dc1a91ec007365ac694">isolation level</a>に応じて調整可能
+    <ul>
+      <li>ある程度緩いレベルで良しとしている場合が多い</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>
+<a href="http://qiita.com/kumagi/items/e93a57535db04e66368f">ACID</a> : Durable</h2>
+
+<ul>
+  <li>Durable: 成功したトランザクションの結果が失われない
+    <ul>
+      <li>不揮発性のディスクにデータがflushされてから”成功”にする
+        <ul>
+          <li>(正確にはメディアリカバリの話もあるが、ここでは無視)</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>ちなみに、意味ないけど</h2>
+
+<ul>
+  <li>パフォーマンスを気にしなければ簡単。たとえば
+    <ul>
+      <li>1度に1クエリしか受け付けず</li>
+      <li>すべての書き込みをログに書いて</li>
+      <li>すべての読み込みでログをフルスキャン</li>
+    </ul>
+  </li>
+  <li>「好ましい性質を保ちつつパフォーマンスを改善する」ための努力が重ねられている</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>本の構成・話の流れ</h2>
+
+<ol>
+  <li>concurrency control
+    <ul>
+      <li>recovery不要の状況でのconcurrencyを議論
+        <ol>
+          <li>読み書き処理のinterleavingの仕方の分類</li>
+          <li>望ましいinterleavingを生み出すscheduling algorithmを考える</li>
+        </ol>
+      </li>
+    </ul>
+  </li>
+  <li>recovery
+    <ul>
+      <li>abortを含む場合のconcurrency control</li>
+      <li>crash後の復旧のためのlogging, checkpointing</li>
+    </ul>
+  </li>
+  <li>distributed transaction
+    <ul>
+      <li>distributed concurrency control, recovery</li>
+      <li>2-phase commitでがんばれ</li>
+    </ul>
+  </li>
+</ol>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>Page model</h2>
+
+<ul>
+  <li>ファイルI/O操作の単位としてのblockがベース
+    <ul>
+      <li>より高レベルの操作も結局blockの出し入れに帰着する</li>
+    </ul>
+  </li>
+  <li>実際、各DB製品ごとに内部で”page”という固定長区画の連なりとしてデータを配置して管理していることが多い
+    <ul>
+      <li>この単位だと思ってもいい</li>
+    </ul>
+  </li>
+  <li>とは言っても、”連続領域”や”固定長”という要素を使わないので、key-value的に捉えておいてOK</li>
+</ul>
+
+</section>
+<section>
+
+<h2>操作のnotation</h2>
+
+<ul>
+  <li>$r_i(x)$ : $i$で識別されるトランザクションが$x$で識別されるページをread</li>
+  <li>$w_i(x)$ : $i$で識別されるトランザクションが$x$で識別されるページをwrite</li>
+  <li>$c_i$    : $i$で識別されるトランザクションがcommit</li>
+  <li>$a_i$    : $i$で識別されるトランザクションがabort</li>
+</ul>
+
+</section>
+<section>
+
+<h2>トランザクションのnotation</h2>
+
+<ul>
+  <li>readとwriteの列
+    <ul>
+      <li>並列実行が許される部分の順序付けは不要なので半順序</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Historyとschedule</h2>
+
+<ul>
+  <li>history:
+    <ul>
+      <li>トランザクション$t_1, …, t_n$の操作をinterleaveした結果で、</li>
+      <li>各トランザクション操作の後ろにcommitかabortどちらか1つを含むもの</li>
+      <li>e.g. $r_1(x) r_2(x) r_1(y) w_1(x) w_2(y) c_1 c_2$</li>
+    </ul>
+  </li>
+  <li>schedule:
+    <ul>
+      <li>historyのprefix</li>
+      <li>e.g. $r_1(x) r_2(x) r_1(y)$</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Serial history</h2>
+
+<ul>
+  <li>トランザクションが何らかの順で逐次実行された形
+    <ul>
+      <li>e.g. $r_1(x) r_1(y) w_1(x) c_1 r_2(x) w_2(y) c_2$</li>
+    </ul>
+  </li>
+  <li>serial historyと”等価” &lt;=&gt; serializable</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Herbrand semantics</h2>
+
+<ul>
+  <li>$r_i(x)$は最後に$x$に書かれた値を読む</li>
+  <li>$w_i(x)$は、$t_i$がそれまでに読んだすべての値を引数に取る関数の適用結果を書き込む</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>Anomalies</h2>
+
+<ul>
+  <li>historyを分類して、OK/NGを判定したい
+    <ul>
+      <li>つまり”等価”とはどういうことか検討したい</li>
+    </ul>
+  </li>
+  <li>それにあたりどういうhistoryがNGかを考えておく</li>
+</ul>
+
+</section>
+<section>
+
+<h2><a href="http://qiita.com/kumagi/items/5ef5e404546736ebac49#dirty-read-anomaly">Dirty read</a></h2>
+
+<ul>
+  <li>commitされていない値をread</li>
+  <li>$r_1(x) w_1(x) r_2(x) a_1 w_2(x) c_2$</li>
+  <li>abortされない場合でも、計算途中の値を読むのもアウト</li>
+</ul>
+
+</section>
+<section>
+
+<h2><a href="http://qiita.com/kumagi/items/5ef5e404546736ebac49#read-skew-anomaly">Read skew</a></h2>
+
+<ul>
+  <li>read操作の間に変更commitが入ってしまった</li>
+  <li>$r_1(x) w_2(x) w_2(y) c_2 r_1(y) c_1$</li>
+</ul>
+
+</section>
+<section>
+
+<h2><a href="http://qiita.com/kumagi/items/5ef5e404546736ebac49#lost-update">Lost update</a></h2>
+
+<ul>
+  <li>2つの更新のうち1つしか適用されない</li>
+  <li>$r_1(x) r_2(x) w_1(x) c_1 w_2(x) c_2$</li>
+</ul>
+
+</section>
+<section>
+
+<h2><a href="http://qiita.com/kumagi/items/5ef5e404546736ebac49#inconsistent-read-anomaly">Inconsistent read</a></h2>
+
+<ul>
+  <li>同じ値を2回読んだら、間の変更commitによって書き換わってしまった</li>
+  <li>$r_1(x) w_2(x) c_2 r_1(x) c_1$</li>
+</ul>
+
+</section>
+<section>
+
+<h2><a href="http://qiita.com/kumagi/items/5ef5e404546736ebac49#write-skew-anomaly">Write skew</a></h2>
+
+<ul>
+  <li>$r_1(x) r_2(y) w_1(y) w_2(x) c_1 c_2$</li>
+  <li>たとえば以下だとすると、$x = y = 0$が$x = y = 1$になってしまう。serialに実行したら$(1, 2), (2, 1)$のどちらかになるはず
+    <ul>
+      <li>$t_1$ : $y = x + 1$</li>
+      <li>$t_2$ : $x = y + 1$</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2><a href="http://qiita.com/kumagi/items/5ef5e404546736ebac49#read-only-anomaly">Read only anomaly</a></h2>
+
+<ul>
+  <li>$r_3(x) r_3(y) r_2(x) w_2(x) c_2 r_1(x) r_2(y) c_1 w_3(y) c_3$
+    <ul>
+      <li>$t_2, t_3$による書き込みの間にreadonlyな$t_1$が挟まる</li>
+      <li>$t_3$による$y$への書き込みは初期状態の$x$, $y$を使っているので、$t_3$ =&gt; $t_2$の順と等価</li>
+      <li>が、実際のcommit順は$c_2$ =&gt; $c_3$</li>
+      <li>このときに$t_1$が読む値はcommit順のとおり$t_2$で$x$が変更された値で、一意なserial historyと等価にならない</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>(おまけ)<a href="https://www.cockroachlabs.com/blog/living-without-atomic-clocks/">Clock skewによる因果関係のねじれ</a>
+</h2>
+
+<ul>
+  <li>page $x$はnode Aに、page $y$はnode Bにいるとする</li>
+  <li>node Bのclockは正確、node Aのclockは100ms進んでいる</li>
+  <li>$t=0$にトランザクション1が$x$に書いてcommit。node Aは$t=100ms$だと思っている</li>
+  <li>$t=50ms$にトランザクション2が$y$に書いてcommit。node Bは$t=50ms$だと思っている(正しい)</li>
+  <li>$x$, $y$の更新timestampがズレる</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2><a href="http://qiita.com/kumagi/items/695f1641407fd726d180">Final state serializable</a></h2>
+
+<ul>
+  <li>2つのscheduleの結果のHerbrand semanticsが同一であればfinal state equivalent</li>
+  <li>何らかのserial historyとfinal state equivalentなhistoryは$\in FSR$</li>
+  <li>read skew等のanomalyを防げない、FSRに含まれるかの判定に時間がかかる =&gt; 実用的でない</li>
+</ul>
+
+</section>
+<section>
+
+<h2><a href="http://qiita.com/kumagi/items/ec498950f8d0a96012f5">View serializable</a></h2>
+
+<ul>
+  <li>最後だけではなくすべてのread, writeでHerbrand semanticsが一致であればview equivalent</li>
+  <li>何らかのserial historyとview equivalentなhistoryは$\in VSR$</li>
+  <li>$VSR \subset FSR$</li>
+  <li>VSRに含まれるかの判定に時間がかかる =&gt; 実用的でない</li>
+</ul>
+
+</section>
+<section>
+
+<h2>
+<a href="http://qiita.com/kumagi/items/2cc25050d7eedb7d5c8d">Conflict serializable</a> (1)</h2>
+
+<ul>
+  <li>同じpageに対する{r, w}, {w, r}, {w, w} : conflict
+    <ul>
+      <li>これらのペアの順序を入れ替えるとsemanticsが変わる</li>
+    </ul>
+  </li>
+  <li>それ以外のペアは入れ替えても等価(conflict equivalent)とみなせる</li>
+</ul>
+
+</section>
+<section>
+
+<h2>
+<a href="http://qiita.com/kumagi/items/2cc25050d7eedb7d5c8d">Conflict serializable</a> (2)</h2>
+
+<ul>
+  <li>何らかのserial historyとconflict equivalentなhisotryは$\in CSR$</li>
+  <li>e.g.
+    <ul>
+      <li>$w_1(x) r_2(x) w_1(y) w_1(z) r_3(z) w_2(y) w_3(y) w_3(z)$</li>
+      <li>$\Rightarrow w_1(x) w_1(y) r_2(x) w_1(z) w_2(y) r_3(z) w_3(y) w_3(z)$</li>
+      <li>$\Rightarrow w_1(x) w_1(y) w_1(z) r_2(x) w_2(y) r_3(z) w_3(y) w_3(z)$</li>
+      <li>$\equiv t_1 t_2 t_3$</li>
+    </ul>
+  </li>
+  <li>$CSR \subset VSR$</li>
+</ul>
+
+</section>
+<section>
+
+<h2>
+<a href="http://qiita.com/kumagi/items/2cc25050d7eedb7d5c8d">Conflict serializable</a> (3)</h2>
+
+<ul>
+  <li>“serializability theorem”</li>
+  <li>CSRに属するかは有向グラフで表現できる</li>
+  <li>scheduleから”conflict graph”を以下のように描く
+    <ul>
+      <li>関与するトランザクションがvertex</li>
+      <li>conflictにある操作のペアがedge</li>
+    </ul>
+  </li>
+  <li>e.g.
+    <ul>
+      <li>$r_1(x) r_2(x) w_1(x) r_3(x) w_3(x) w_2(y) c_3 c_2 w_1(y) c_1$</li>
+      <li>$t_1$ =&gt; $t_3$, $t_2$ =&gt; $t_1$, $t_2$ =&gt; $t_3$</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>
+<a href="http://qiita.com/kumagi/items/2cc25050d7eedb7d5c8d">Conflict serializable</a> (3)</h2>
+
+<ul>
+  <li>$s \in CSR$ iff conflict graph is asyclic
+    <ul>
+      <li>conflictしている部分は入れ替えられないので、その順序でconflict equivalentなserial historyが決まる</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<ul>
+  <li>Concurrency control algorithmsに続く…</li>
+</ul>
+
+</section>
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'page',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+  var configOptions = {"dependencies":[{"src":"plugin/math/math.js","async":true}],"math":{"mathjax":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"}}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>
