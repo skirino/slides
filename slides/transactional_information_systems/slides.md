@@ -12,7 +12,7 @@
 
 ## 読もうと思ったモチベーション
 
-- DBはビジネス上の重要性に対して理解してなさすぎ
+- ビジネス上の重要性の割にDBの理解が足りてない
     - 意識しなくてもそれなりに仕事になるのはスバラシイという言い方もできる
     - が、"それなり"止まり
 - 中でもトランザクション関係は(個人的に)謎に包まれている
@@ -205,7 +205,7 @@
 
 ---
 
-## (おまけ)[Clock skewによる因果関係のねじれ](https://www.cockroachlabs.com/blog/living-without-atomic-clocks/)
+## (おまけ)[External consistency](https://www.cockroachlabs.com/blog/living-without-atomic-clocks/)
 
 - page $x$はnode Aに、page $y$はnode Bにいるとする
 - node Bのclockは正確、node Aのclockは100ms進んでいる
@@ -274,4 +274,249 @@
 ***
 ***
 
-- Concurrency control algorithmsに続く...
+## Scheduling algorithms
+
+- "scheduler"
+    - transactionの各操作が順次入力として入ってくる
+    - serializableなscheduleを生成する
+        - ここではCSRなscheduleを生成することを考える
+
+---
+
+## Scheduler classification
+
+- "locking"
+    - lockを使うもの
+    - 必然的にpessimistic concurrency control
+- "non-locking"
+    - lockは使わないもの
+    - pessimisticでもoptimisticでもありうる
+
+***
+***
+
+## Locking schedulers
+
+- lockを使って共通で使われるデータへのアクセスをsynchronizeする
+- 操作の前にlockを取得
+    - 取得できなければ待つ
+- 操作の後にlockを解放
+
+---
+
+## Notation
+
+- scheduleにlock/unlockを含めて考える
+    - read lock    : $rl_i(x)$
+    - write lock   : $wl_i(x)$
+    - read unlock  : $ru_i(x)$
+    - write unlock : $wu_i(x)$
+
+---
+
+## Example schedule
+
+- $s = rl_1(x) r_1(x) wl_1(y) w_1(y) ru_1(x) wu_1(y) c_1$
+  $wl_2(x) w_2(x) wl_2(y) w_2(y) wu_2(x) wu_2(y) c_2$
+
+---
+
+## Rules for well-formed locking
+
+- $r$/$w$の前に$rl$/$wl$がある
+- $r$/$w$の後に$ru$/$wu$がある
+- 1つのtransactionは多重にlockをかけない
+- $t_i$がすでにlockしている$x$を$t_j$がlockする場合
+    - $rl_i(x) <_s rl_j(x)$ : OK
+    - $rl_i(x) <_s wl_j(x)$ : NG
+    - $wl_i(x) <_s rl_j(x)$ : NG
+    - $wl_i(x) <_s wl_j(x)$ : NG
+- (これらを満たさないscheduleは違法として考えない)
+
+---
+
+## Two-phase locking (2PL)
+
+- (Two-phase commitと混同しないように)
+- 定義: 2PLなscheduleでは
+    - すべてのlockがすべてのunlockよりも先にくる
+        - 言い換えると、lockの"growing phase"と"shrinking phase"に分かれている。shrinking phaseになるまではlockを1つも手放さない
+
+---
+
+## Example
+
+- Input:
+    - $w_1(x) w_1(y) c_1$
+    - $r_2(x) w_2(y) c_2$
+    - $r_3(z) w_3(y) w_3(z) c_3$
+- Output (一例、他もありうる):
+    - $wl_1(x) w_1(x) wl_1(y) w_1(y) wl_1(z) w_1(z) wu_1(x) rl_2(x) r_2(x)$
+      $wu_1(y) wu_1(z) c_1 rl_3(z) r_3(z) wl_2(y) w_2(y) wu_2(y) ru_2(x) c_2$
+      $wl_3(y) w_3(y) wl_3(z) w_3(z) wu_3(z) wu_3(y) c_3$
+
+---
+
+## CSR-safety (1)
+
+- 大雑把には
+    - 個々のpageに対するconflictはlockが順序を決める
+    - 1つのtransactionの中のlockとunlockに順序がある
+    - 両者合わせて全体として整合的な順序が作れる
+
+---
+
+## CSR-safety (2)
+
+- 2PLな$s$とそのconflict graph $G$を考える
+- Lemma 1-a
+    - $(t_i, t_j)$ is an edge in $G$ $\Rightarrow$ $pu_i(x) < ql_j(x)$
+        - $p, q$は$r$か$w$、どちらも$r$は除外
+- Proof
+    1. $G$の定義より$p_i(x) < q_j(x)$
+    2. lockのルールによりunlockが先に来ないとlockできない
+
+---
+
+## CSR-safety (3)
+
+- Lemma 2
+    - $G$はacyclic
+- Proof
+    - cycleがあると仮定、そのedgeを$(t_1, t_2), ..., (t_n, t_1)$と書く
+    - Lemma 1より、各edgeにつき$pu_1(x) < ql_2(x), ..., $が成り立つ
+    - つまり「shrinking phaseが始まるのは$t_1$の方が$t_2$より先」、...
+    - 回りまわって大小関係に矛盾
+
+---
+
+## CSR-safety (4)
+
+- ただちに$Gen(2PL) \subseteq CSR$となる
+- 実際はもっとrefineできて$Gen(2PL) \subset OCSR \subset CSR$
+    - Order-preserving CSR
+
+---
+
+## Deadlock handling (1)
+
+- ここまでの話だけではdeadlockが避けられない。対処が必要
+- deadlock detection
+    - どのtransactionがどのtransactionを待っているかをtrackingして検出
+        - graphがcyclicになったらdeadlock
+    - 検出したらcycleを壊すためどれかをabortさせる
+        - どれをabortさせるかの戦略がいくつか
+
+---
+
+## Deadlock handling (2)
+
+- deadlock prevention
+    - 何らかの優先順位に応じてlockをかけ、優先順位に合わない場合はabort
+        1. lock済みtxに比べ、自分の方が先にスタートしたtxであれば待つ、そうでなければabort
+        2. lock済みtxに比べ、自分の方が先にスタートしたtxであれば相手をabort、そうでなければ待つ
+        3. lock済みtxがlock獲得待ちならabortさせ、そうでなければ自分が待つ(activeな方優先)
+        4. ...
+    - 実際にdeadlockが発生しなくてもabortが起きうる点に注意
+
+---
+
+## Variants of 2PL (1)
+
+- Conservative 2PL
+    - 必要なlockを一度に獲得する(growing phaseが1瞬で終わる)
+    - deadlockが避けられる、始まったらblockされない
+    - が、実際は必要なlockが必ずしもすべてわかっているわけではない
+
+---
+
+## Variants of 2PL (2)
+
+- Strict 2PL
+    - すべてのwrite lockを一度に解放する
+    - recoveryの点でも良い性質がある(class ST)
+    - 実際の製品でよく使われている
+
+---
+
+## Variants of 2PL (3)
+
+- Strong strict 2PL
+    - すべてのlockを一度に解放する(shrinking phaseが1瞬で終わる)
+    - recoveryの点でも良い性質がある(class RG)
+    - $Gen(SS2PL) \subset Gen(S2PL) \subset Gen(2PL)$
+    - $Gen(SS2PL) \subset COCSR$
+        - Conflict Order-preserving CSR
+
+---
+
+## ANSI isolationレベルとS2PL
+
+- read uncommitted : writeのみS2PL、read lockなし
+- read committed : writeのみS2PL、read lockはありだがいつでも取得/解放
+- repeatable read : read/writeでS2PL
+- serializable : read/writeでS2PLに加えてphantom対策のpredicate locking
+
+***
+***
+
+## Nonlocking schedulers
+
+- Timestamp ordering
+- Serialization graph testing
+
+---
+
+## Timestamp ordering (1)
+
+- ルール
+    - $t_i$にtimestampとして$ts(t_i)$を振る(e.g. 狭義単調増加なtx ID)
+    - $p_i(x), q_j(x)$がconflictしているとき、$p_i(x) < q_j(x)$ iff $ts(t_i) < ts(t_j)$
+- $Gen(TO) \subseteq CSR$
+    - conflictのあるtx間にはtimestampによる順序ができcycleにならない
+
+---
+
+## Timestamp ordering (2)
+
+- 実装上は
+    - 最後にread/writeしたtimestampをdata itemごとに覚えておく
+    - すでに後続txが処理を行ってしまっていたらabort、新しいtimestampでやり直す
+
+---
+
+## Serialization graph testing
+
+- serialization graphを保持
+- txに応じてnodeを作る
+- conflictしている操作を行うときにはedgeを追加、cycleができたらabort
+- $Gen(SGT) = CSR$
+- graph保持・cycle有無チェックのコストが高くあまり使われない
+
+***
+***
+
+## Optimistic protocols (1)
+
+- conflictの頻度が少なければ、lock操作の負担を減らしたくなる
+- 逐一関門(lock)を設けるのではなく、read/write処理はどんどん進めてしまい、最後にvalidateする方式
+- マルチコアな流れもあって最近よく採用されている模様
+
+---
+
+## Optimistic protocols (2)
+
+- 以下の3 phaseに分けてtxを実行する
+    1. Read phase : 読み出し時にバージョンも取る。書き込みは本体には反映せず"write set"として蓄積していく
+    2. Validation phase : バージョンが変わっていないことを検証する
+    3. Write phase : write setの中身を本体に適用する
+
+---
+
+## Optimistic protocols (3)
+
+- 実装上は複数の処理をatomicに適用する必要があり、限定的にlockする形になる
+    1. validation phaseの前にwrite setすべてにlockをかける
+    2. read setのバージョンを確認
+    3. バージョンが一致したらwrite setを反映、変わっていたらabort
+    4. unlock
