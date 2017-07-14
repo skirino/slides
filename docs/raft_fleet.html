@@ -7,7 +7,7 @@
 
 <meta name="description" content="">
 <meta name="author" content="Shunsuke Kirino">
-<meta name="generator" content="reveal-ck 3.4.0">
+<meta name="generator" content="reveal-ck 3.5.1">
 
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -89,7 +89,7 @@
 <h3>Motivation (3)</h3>
 
 <ul>
-  <li>That’s because we need
+  <li>It’s hard because we need
     <ul>
       <li>data replication within multiple nodes</li>
       <li>leader election mechanism (or something similar) to serialize client requests
@@ -138,8 +138,12 @@
       <li>tolerance for DC-failure is also nice to have</li>
     </ul>
   </li>
+  <li>Persist data for crash recovery
+    <ul>
+      <li>periodic cleanup of unnecessary data in disk</li>
+    </ul>
+  </li>
   <li>Automatically recover from non-critical node failure</li>
-  <li>(no persistence is needed for our purpose)</li>
   <li>Provide flexible data model for “state”s</li>
 </ul>
 
@@ -209,7 +213,6 @@
 <ul>
   <li>Raft protocol implementation, including membership changes
     <ul>
-      <li>Raft logs are not persisted</li>
       <li>Each Raft member as a <a href="http://erlang.org/doc/man/gen_fsm.html"><code>:gen_fsm</code></a> process
         <ul>
           <li>in retrospect <a href="http://erlang.org/doc/man/gen_server.html"><code>:gen_server</code></a> would also be OK</li>
@@ -262,8 +265,8 @@
     <ul>
       <li>a <code>:gen_fsm</code> with 3 states: <code>leader</code>, <code>candidate</code>, <code>follower</code>
 </li>
-      <li>need to handle 17 types of events</li>
-      <li>=&gt; 51 handlers to implement</li>
+      <li>need to handle 19 types of events</li>
+      <li>=&gt; 57 handlers to implement</li>
     </ul>
   </li>
   <li>Sane module- and function-level design is the key
@@ -601,8 +604,8 @@ end
 <ul>
   <li>We have used <code>raft_fleet</code> to implement job queues
     <ul>
-      <li>only in-memory</li>
-      <li>push-based; avoid excessive polling</li>
+      <li>one consensus group per job queue</li>
+      <li>push-based communication; avoid excessive polling</li>
     </ul>
   </li>
 </ul>
@@ -616,8 +619,13 @@ end
 <ul>
   <li>On adding a node to working cluster:
     <ul>
-      <li>Call <code>RaftFleet.activate/1</code> in <code>SomeApp.start/2</code>
+      <li>In <code>YourApp.start/2</code>,
+        <ul>
+          <li>connect the node to other nodes in the cluster, then</li>
+          <li>call <code>RaftFleet.activate/1</code>
 </li>
+        </ul>
+      </li>
       <li>The node starts to host member processes of existing consensus groups</li>
     </ul>
   </li>

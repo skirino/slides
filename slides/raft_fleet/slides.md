@@ -24,7 +24,7 @@
 
 ### Motivation (3)
 
-- That's because we need
+- It's hard because we need
     - data replication within multiple nodes
     - leader election mechanism (or something similar) to serialize client requests
         - and failover of a failed leader
@@ -49,8 +49,9 @@
 
 - Tolerate failures of minority of consensus group members
     - tolerance for DC-failure is also nice to have
+- Persist data for crash recovery
+    - periodic cleanup of unnecessary data in disk
 - Automatically recover from non-critical node failure
-- (no persistence is needed for our purpose)
 - Provide flexible data model for "state"s
 
 ---
@@ -88,7 +89,6 @@
 ### [rafted_value](https://github.com/skirino/rafted_value) - Overview
 
 - Raft protocol implementation, including membership changes
-    - Raft logs are not persisted
     - Each Raft member as a [`:gen_fsm`](http://erlang.org/doc/man/gen_fsm.html) process
         - in retrospect [`:gen_server`](http://erlang.org/doc/man/gen_server.html) would also be OK
 - Arbitrary data structure can be replicated among members
@@ -113,8 +113,8 @@
 
 - Core component is [`RaftedValue.Server`](https://github.com/skirino/rafted_value/blob/master/lib/rafted_value/server.ex) module
     - a `:gen_fsm` with 3 states: `leader`, `candidate`, `follower`
-    - need to handle 17 types of events
-    - => 51 handlers to implement
+    - need to handle 19 types of events
+    - => 57 handlers to implement
 - Sane module- and function-level design is the key
     - unify multiple handlers
     - hierarchical process state (nested struct)
@@ -301,15 +301,17 @@ end
 ### [raft_fleet](https://github.com/skirino/raft_fleet) in action (1)
 
 - We have used `raft_fleet` to implement job queues
-    - only in-memory
-    - push-based; avoid excessive polling
+    - one consensus group per job queue
+    - push-based communication; avoid excessive polling
 
 ---
 
 ### [raft_fleet](https://github.com/skirino/raft_fleet) in action (2)
 
 - On adding a node to working cluster:
-    - Call `RaftFleet.activate/1` in `SomeApp.start/2`
+    - In `YourApp.start/2`,
+        - connect the node to other nodes in the cluster, then
+        - call `RaftFleet.activate/1`
     - The node starts to host member processes of existing consensus groups
 
 ---
