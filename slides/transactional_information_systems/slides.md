@@ -446,7 +446,7 @@
     - recoveryの点でも良い性質がある(class RG)
     - $Gen(SS2PL) \subset Gen(S2PL) \subset Gen(2PL)$
     - $Gen(SS2PL) \subset COCSR$
-        - Conflict Order-preserving CSR
+        - Commit Order-preserving CSR
 
 ---
 
