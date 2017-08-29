@@ -216,6 +216,11 @@
 ***
 ***
 
+## Concurrency control
+
+***
+***
+
 ## [Final state serializable](http://qiita.com/kumagi/items/695f1641407fd726d180)
 
 - 2つのscheduleの結果のHerbrand semanticsが同一であればfinal state equivalent
@@ -520,3 +525,248 @@
     2. read setのバージョンを確認
     3. バージョンが一致したらwrite setを反映、変わっていたらabort
     4. unlock
+
+***
+***
+
+## Multiversion concurrency control
+
+- これまでのprotocolでは各pageは"1つの何か"だった
+- この制限を外して複数バージョンを保持することを考える
+    - writeは上書きせずに新バージョンを作る
+    - readではどのバージョンを読むかの自由度が生まれる
+- ここでのバージョンは"ユーザから透過的"(concurrency controlのための実装詳細)
+
+---
+
+## Multiversion schedule
+
+- $s = r_1(x) w_1(x) r_2(x) w_2(y) r_1(y) w_1(z) c_1 c_2$
+    - $s \notin CSR$
+- $m = r_1(x_0) w_1(x_1) r_2(x_1) w_2(y_2) r_1(y_0) w_1(z_1) c_1 c_2$
+    - ($x_1$など、"書き込んだtransaction"でバージョンを区別)
+    - $r_1(y)$のところで$w_2(y)$が書き込む前の$y$を読めればよい
+
+---
+
+## Multiversion serializability (1)
+
+- $s = w_0(x) c_0 w_1(x) c_1 r_2(x) w_2(y) c_2$
+    - serial monoversion history
+- $m = w_0(x_0) c_0 w_1(x_1) c_1 r_2(x_0) w_2(y_2) c_2$
+    - multiversion history
+    - $r_2(x)$のところで$x_1$ではなく$x_0$を読んでいるので、$w_2(y)$で書き込まれる値は$s$と$m$とで異なりうる
+
+---
+
+## Multiversion serializability (2)
+
+- $r_i(x_j)$があれば、$t_i$は$t_j$に依存していることになる
+- history内のすべての$r_i(x_j)$をReads-from relationとし、
+- Reads-fromが同じhistory同士は等価(view equivalence)
+
+---
+
+## Multiversion serializability (3)
+
+- $m = r_1(x_0) r_1(y_0) w_1(x_1) w_1(y_1) c_1 r_2(x_0) r_2(y_1) c_2$
+    - $t_1$, $t_2$が順に実行されている
+- $s = r_1(x) r_1(y) w_1(x) w_1(y) c_1 r_2(x) r_2(y) c_2$
+- $s$はもちろんserialだが、$r_2(x)$で読む値が違うため、$m$は$s$と等価ではない
+- multiversionなhistoryは、等価なserial monoversion historyがあれば、serializableとみなせる
+
+---
+
+## MV serialization graph (1)
+
+- serial historyと対応付けるにあたり、tx間の順序が決まるポイント
+    - $w_i(x_i)$が作ったverを$r_j(x_i)$が読む : $t_i \Rightarrow t_j$
+    - $w_i(x_i)$が作ったverより新しいverを$w_j(x_j)$が作る : $t_i \Rightarrow t_j$
+    - $r_i(x_j)$で読んだverより新しいverを$w_k(x_k)$が作る : $t_i \Rightarrow t_k$
+- txをnodeとし、上の3通りをedgeとする有向グラフを考える
+
+---
+
+## MV serialization graph (2)
+
+- Theorem: MVSG is acyclic iff $m \in MVSR$
+- Proof (ifのみ):
+    - トポロジカルソートでserialな$m' \approx_v m$を作れる
+    - $r_k(x_j), w_i(x_i) \in m'$があれば以下どちらかを満たす
+      $t_i \Rightarrow t_j$ or $t_k \Rightarrow t_i$
+    - つまり、$t_j$と$t_k$の間に$x$の書き込みは発生しない
+    - serialでmonoversionとみなせる$m'$と等価なので、$m$もserializable
+
+---
+
+## MV conflict serializability
+
+- monoversionのときと同様にconflict関係から議論することもできるが、
+  MVSRのように対応するserial historyが具体的に得られるわけではなくて扱いづらい
+- MVSRが実用上使われるクラス
+
+---
+
+## MVCC protocols (1)
+
+- MV timestamp ordering
+    - tx開始時にtimestampを割り当てる
+    - $r_i(x)$は最新バージョンを読む : $r_i(x_k)$
+    - $w_i(x)$は
+        - より新しい$t_j$が$r_j(x_k)$が読んだ : abort
+        - そうでなければ : $w_i(x_i)$
+    - $c_i$は読んだバージョンを作ったtxが完了するまで待つ
+
+---
+
+## MVCC protocols (2)
+
+- MV 2PL
+- Read-only MV
+    - Snapshot Isolationのベースになる
+      (snapshotを読んで、書き込み同士がdisjointかテスト)
+
+---
+
+## Practical issues in MVCC
+
+- 同一pageについて何バージョンまで保持するか?
+- 古いバージョンの破棄?
+
+***
+***
+
+## Transaction recovery
+
+***
+***
+
+## Handling transaction aborts
+
+- これまでabortは除外してきたが、どう扱う?
+- 特にdirty read
+    - $w_1(x) r_2(x) c_2 a_1$
+
+---
+
+## Expanded schedule
+
+- abortをwriteのundo処理とcommitに置き換える
+- $s = r_1(x) w_1(x) r_2(x) a_1 w_2(x) c_2$
+- $exp(s) = r_1(x) w_1(x) r_2(x) w_1^{-1}(x) c_1 w_2(x) c_2$
+- expandした結果でCSRかを見る: XCSR
+
+---
+
+## Problem with XCSR
+
+- $s = w_1(x) w_2(x) a_2 a_1$
+- $exp(s) = w_1(x) w_2(x) w_2^{-1}(x) c_2 w_1^{-1}(x) c_1$
+- これは何もしない無害なhistoryだが、cycleがあって拒絶されてしまう
+
+---
+
+## Reducibile
+
+- 次の操作でserial historyに変換できれば"reducible"
+    - conflictしていないペアを入れ替え
+    - 隣接する$w_i(x) w_i^{-1}(x)$を消す
+    - abortした$r_i(x)$を消す
+- 任意のタイミングでabortしうることを考えると、scheduleのすべてのprefixがreducibleであってほしい : prefix reducible
+
+---
+
+## Recoverabile
+
+- すべての$t_i, t_j \in trans(s)$について
+    - $t_i$が$t_j$の書いた値を読んで、かつ、$t_i$がコミットされるなら
+    - $t_j$もコミットされて、$c_j <_s c_i$
+- 「dirty-readを防ぐべく、dirtyでなくなるまで待ってからコミット」
+    - wr conflictを気にする
+
+---
+
+## Avoiding cascading aborts
+
+- すべての$t_i, t_j \in trans(s)$について
+    - $t_i$が$t_j$の書いた$x$を読むなら、$c_j <_s r_i(x)$
+- 「読んだ時点でdirtyでないことが確定していて、abort連鎖にならない」
+
+---
+
+## Strict
+
+- すべての$t_i \in trans(s)$, $p_i(x) \in op(t_i)$について($p \in {r, w}$)
+    - $w_j(x) <_s p_i(x)ならば
+    - $a_j <_s p_i(x)$または$c_j <_s p_i(x)$
+- 「$t_j$が書き込んだ値に$t_i$がr/wするときには、$t_j$はすでに終わっている(c/a)」
+    - $w_1(x) w_2(x) w_3(x)$のうち$w_1(x)$をundoするとき、3つundo, 2つredoとなるのを避けたい
+
+---
+
+## Rigorous
+
+- strict、かつ
+- すべての$t_i, t_j \in trans(s)$について
+    - $r_j(x) <_s w_i(x)$ならば
+    - $a_j <_s w_i(x)$または$c_j <_s w_i(x)$
+- 「上書きは前の値を読んだtxが終わってから」
+    - strictだとwr, ww conflictがカバーされる。rigorousならrwもカバー
+
+---
+
+## Relationships (1)
+
+- $RG \subset ST \subset ACA \subset RC$
+- $RG \subset COCSR \subset CSR$
+    - RGになっていればCSRだから、concurrency controlとrecoveryの両方をクリア済み
+
+---
+
+## Log recoverable
+
+- recoverable、かつ
+- すべての$t_i, t_j \in trans(s)$について
+    - $w_i(x) <_s w_j(x)$があるならば
+        - $t_j$はコミットされて、$a_i <_s w_j(x)$または$c_i <_s c_j$
+        - $t_i$はabortされて、$a_j <_s a_i$
+- 「ww conflictがあったら前の方のtxが適切に終わる」
+    - $a$が$w^{-1}$になった場合に、キャンセルできる形になる
+
+---
+
+## Relationships (2)
+
+- $CSR \cap ST \subset PRED \subset CSR \cap RC$
+- $PRED = CSR \cap LRC$
+    - PREDも便利(その場合cascading abortはしょうがない)
+
+***
+***
+
+## Extended 2PL
+
+- $Gen(SS2PL) = RG$
+    - SS2PLでは終了までconflictするtxが待たされる。このルールはRGそのもの
+- $Gen(S2PL) \subseteq CSR \cap ST$
+    - STはww, wr conflictでwのtxが完了することを言うので、ほぼS2PLそのもの
+
+---
+
+## Extended protocols for LRC
+
+- (これらはcascading abortすることに注意)
+- 2PL, SGT, TOなどに以下のルールを加える
+    - conflict graphにおける$precede(t_i), follow(t_i)$を覚えておく
+    - $c_i$は$t_j \in precede(t_i)$がすべてcommitしてから実行
+    - $a_i$は$t_j \in follow(t_i)$がすべてabortしてから実行
+
+***
+***
+
+## Crash recovery
+
+***
+***
+
+To be continued...
