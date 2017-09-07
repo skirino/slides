@@ -1085,7 +1085,7 @@ MVSRのように対応するserial historyが具体的に得られるわけで�
       <li>$r_i(x)$は最新バージョンを読む : $r_i(x_k)$</li>
       <li>$w_i(x)$は
         <ul>
-          <li>より新しい$t_j$が$r_j(x_k)$が読んだ : abort</li>
+          <li>より新しい$t_j$が$r_j(x_k)$を読んだ : abort</li>
           <li>そうでなければ : $w_i(x_i)$</li>
         </ul>
       </li>
@@ -1224,7 +1224,7 @@ MVSRのように対応するserial historyが具体的に得られるわけで�
 <ul>
   <li>すべての$t_i \in trans(s)$, $p_i(x) \in op(t_i)$について($p \in {r, w}$)
     <ul>
-      <li>$w_j(x) &lt;_s p_i(x)ならば</li>
+      <li>$w_j(x) &lt;_s p_i(x)$ならば</li>
       <li>$a_j &lt;_s p_i(x)$または$c_j &lt;_s p_i(x)$</li>
     </ul>
   </li>
@@ -1261,7 +1261,12 @@ MVSRのように対応するserial historyが具体的に得られるわけで�
 <h2>Relationships (1)</h2>
 
 <ul>
-  <li>$RG \subset ST \subset ACA \subset RC$</li>
+  <li>各クラスは包含関係にある
+    <ul>
+      <li>$RG \subset ST \subset ACA \subset RC$</li>
+    </ul>
+  </li>
+  <li>これらの望ましい性質とCSRを両立させたい</li>
   <li>$RG \subset COCSR \subset CSR$
     <ul>
       <li>RGになっていればCSRだから、concurrency controlとrecoveryの両方をクリア済み</li>

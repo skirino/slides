@@ -613,7 +613,7 @@
     - tx開始時にtimestampを割り当てる
     - $r_i(x)$は最新バージョンを読む : $r_i(x_k)$
     - $w_i(x)$は
-        - より新しい$t_j$が$r_j(x_k)$が読んだ : abort
+        - より新しい$t_j$が$r_j(x_k)$を読んだ : abort
         - そうでなければ : $w_i(x_i)$
     - $c_i$は読んだバージョンを作ったtxが完了するまで待つ
 
@@ -697,7 +697,7 @@
 ## Strict
 
 - すべての$t_i \in trans(s)$, $p_i(x) \in op(t_i)$について($p \in {r, w}$)
-    - $w_j(x) <_s p_i(x)ならば
+    - $w_j(x) <_s p_i(x)$ならば
     - $a_j <_s p_i(x)$または$c_j <_s p_i(x)$
 - 「$t_j$が書き込んだ値に$t_i$がr/wするときには、$t_j$はすでに終わっている(c/a)」
     - $w_1(x) w_2(x) w_3(x)$のうち$w_1(x)$をundoするとき、3つundo, 2つredoとなるのを避けたい
@@ -717,7 +717,9 @@
 
 ## Relationships (1)
 
-- $RG \subset ST \subset ACA \subset RC$
+- 各クラスは包含関係にある
+    - $RG \subset ST \subset ACA \subset RC$
+- これらの望ましい性質とCSRを両立させたい
 - $RG \subset COCSR \subset CSR$
     - RGになっていればCSRだから、concurrency controlとrecoveryの両方をクリア済み
 
