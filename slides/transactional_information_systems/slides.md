@@ -646,6 +646,7 @@
 - これまでabortは除外してきたが、どう扱う?
 - 特にdirty read
     - $w_1(x) r_2(x) c_2 a_1$
+- (以下、"望ましい"scheduleの分類)
 
 ---
 
@@ -715,7 +716,7 @@
 
 ---
 
-## Relationships (1)
+## Inclusion relation (1)
 
 - 各クラスは包含関係にある
     - $RG \subset ST \subset ACA \subset RC$
@@ -737,7 +738,7 @@
 
 ---
 
-## Relationships (2)
+## Inclusion relation (2)
 
 - $CSR \cap ST \subset PRED \subset CSR \cap RC$
 - $PRED = CSR \cap LRC$
