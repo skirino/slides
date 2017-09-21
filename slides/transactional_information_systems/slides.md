@@ -663,7 +663,7 @@
 
 - $s = w_1(x) w_2(x) a_2 a_1$
 - $exp(s) = w_1(x) w_2(x) w_2^{-1}(x) c_2 w_1^{-1}(x) c_1$
-- これは何もしない無害なhistoryだが、cycleがあって拒絶されてしまう
+- これは何もしない無害なhistoryだが、$exp(s) \notin XCSR$
 
 ---
 
