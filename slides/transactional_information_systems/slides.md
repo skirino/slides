@@ -644,9 +644,9 @@
 ## Handling transaction aborts
 
 - これまでabortは除外してきたが、どう扱う?
-- 特にdirty read
-    - $w_1(x) r_2(x) c_2 a_1$
-- (以下、"望ましい"scheduleの分類)
+    - 特にdirty read
+        - $w_1(x) r_2(x) c_2 a_1$
+- (crashによるabortは後で考える。ここではDBが生きている中でのabort)
 
 ---
 
@@ -667,7 +667,7 @@
 
 ---
 
-## Reducibile
+## Reducible
 
 - 次の操作でserial historyに変換できれば"reducible"
     - conflictしていないペアを入れ替え
@@ -677,7 +677,14 @@
 
 ---
 
-## Recoverabile
+## Syntactic classifications
+
+- PREDでだいたい良さそうだが、もう少し検討すべき点がある
+- 以下、recoveryのために望ましいscheduleをさらに分類していく
+
+---
+
+## Recoverable
 
 - すべての$t_i, t_j \in trans(s)$について
     - $t_i$が$t_j$の書いた値を読んで、かつ、$t_i$がコミットされるなら

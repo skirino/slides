@@ -1136,13 +1136,16 @@ MVSRのように対応するserial historyが具体的に得られるわけで�
 <h2>Handling transaction aborts</h2>
 
 <ul>
-  <li>これまでabortは除外してきたが、どう扱う?</li>
-  <li>特にdirty read
+  <li>これまでabortは除外してきたが、どう扱う?
     <ul>
-      <li>$w_1(x) r_2(x) c_2 a_1$</li>
+      <li>特にdirty read
+        <ul>
+          <li>$w_1(x) r_2(x) c_2 a_1$</li>
+        </ul>
+      </li>
     </ul>
   </li>
-  <li>(以下、”望ましい”scheduleの分類)</li>
+  <li>(crashによるabortは後で考える。ここではDBが生きている中でのabort)</li>
 </ul>
 
 </section>
@@ -1171,7 +1174,7 @@ MVSRのように対応するserial historyが具体的に得られるわけで�
 </section>
 <section>
 
-<h2>Reducibile</h2>
+<h2>Reducible</h2>
 
 <ul>
   <li>次の操作でserial historyに変換できれば”reducible”
@@ -1187,7 +1190,17 @@ MVSRのように対応するserial historyが具体的に得られるわけで�
 </section>
 <section>
 
-<h2>Recoverabile</h2>
+<h2>Syntactic classifications</h2>
+
+<ul>
+  <li>PREDでだいたい良さそうだが、もう少し検討すべき点がある</li>
+  <li>以下、recoveryのために望ましいscheduleをさらに分類していく</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Recoverable</h2>
 
 <ul>
   <li>すべての$t_i, t_j \in trans(s)$について
