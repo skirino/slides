@@ -564,15 +564,6 @@
 - $r_i(x_j)$があれば、$t_i$は$t_j$に依存していることになる
 - history内のすべての$r_i(x_j)$をReads-from relationとし、
 - Reads-fromが同じhistory同士は等価(view equivalence)
-
----
-
-## Multiversion serializability (3)
-
-- $m = r_1(x_0) r_1(y_0) w_1(x_1) w_1(y_1) c_1 r_2(x_0) r_2(y_1) c_2$
-    - $t_1$, $t_2$が順に実行されている
-- $s = r_1(x) r_1(y) w_1(x) w_1(y) c_1 r_2(x) r_2(y) c_2$
-- $s$はもちろんserialだが、$r_2(x)$で読む値が違うため、$m$は$s$と等価ではない
 - multiversionなhistoryは、等価なserial monoversion historyがあれば、serializableとみなせる
 
 ---

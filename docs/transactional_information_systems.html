@@ -1010,21 +1010,6 @@ $wl_3(y) w_3(y) wl_3(z) w_3(z) wu_3(z) wu_3(y) c_3$</li>
   <li>$r_i(x_j)$があれば、$t_i$は$t_j$に依存していることになる</li>
   <li>history内のすべての$r_i(x_j)$をReads-from relationとし、</li>
   <li>Reads-fromが同じhistory同士は等価(view equivalence)</li>
-</ul>
-
-</section>
-<section>
-
-<h2>Multiversion serializability (3)</h2>
-
-<ul>
-  <li>$m = r_1(x_0) r_1(y_0) w_1(x_1) w_1(y_1) c_1 r_2(x_0) r_2(y_1) c_2$
-    <ul>
-      <li>$t_1$, $t_2$が順に実行されている</li>
-    </ul>
-  </li>
-  <li>$s = r_1(x) r_1(y) w_1(x) w_1(y) c_1 r_2(x) r_2(y) c_2$</li>
-  <li>$s$はもちろんserialだが、$r_2(x)$で読む値が違うため、$m$は$s$と等価ではない</li>
   <li>multiversionなhistoryは、等価なserial monoversion historyがあれば、serializableとみなせる</li>
 </ul>
 
