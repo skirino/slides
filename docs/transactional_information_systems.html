@@ -1362,7 +1362,593 @@ MVSRのように対応するserial historyが具体的に得られるわけで�
 <section>
 <section>
 
-<p>To be continued…</p>
+<h2>任意のタイミングでのcrash</h2>
+
+<ul>
+  <li>電源OFF</li>
+  <li>カーネルパニック</li>
+  <li>kill -9</li>
+  <li>segmentation fault</li>
+  <li>
+    <p>…</p>
+  </li>
+  <li>常にdurableでなければならない</li>
+</ul>
+
+</section>
+<section>
+
+<h2>ここで対象とするcrash</h2>
+
+<ul>
+  <li>ディスク上のデータは無事
+    <ul>
+      <li>crash前に書き込まれたデータを読める</li>
+    </ul>
+  </li>
+  <li>問題発生後もプロセスが走り続ける状況は考えない
+    <ul>
+      <li>sanity check(assert)を適宜入れておけばほぼ大丈夫</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>目標</h2>
+
+<ul>
+  <li>crash後のrecoveryにより
+    <ul>
+      <li>commit済みtxの書き込みが残る</li>
+      <li>commitされていないtxの書き込みが残らない</li>
+    </ul>
+  </li>
+  <li>当然、復旧完了までが短い方がよい</li>
+  <li>通常処理に与えるoverheadも小さい方がよい</li>
+</ul>
+
+</section>
+<section>
+
+<h2>crash recoveryの特殊性</h2>
+
+<ul>
+  <li>通常時の動作よりもdebug, testがより難しい
+    <ul>
+      <li>crashはrare</li>
+      <li>recovery中に再度crashしても大丈夫?</li>
+    </ul>
+  </li>
+  <li>critical
+    <ul>
+      <li>bugがあると大事なデータが失われる</li>
+    </ul>
+  </li>
+  <li>=&gt; invariantsをちゃんと考える必要がある</li>
+</ul>
+
+</section>
+<section>
+
+<h2>System model (1)</h2>
+
+<ul>
+  <li>recoveryに必要な情報を常にdisk上に用意しなければならない</li>
+  <li>=&gt; logのような形で随時追記していくほかない</li>
+</ul>
+
+</section>
+<section>
+
+<h2>System model (2)</h2>
+
+<ul>
+  <li>Stable database
+    <ul>
+      <li>Set of pages in disk</li>
+    </ul>
+  </li>
+  <li>Database cache
+    <ul>
+      <li>Subset of stable database pages copied into memory</li>
+    </ul>
+  </li>
+  <li>Stable log
+    <ul>
+      <li>On disk log entries for bookkeeping</li>
+    </ul>
+  </li>
+  <li>Log buffer
+    <ul>
+      <li>In-memory buffer for log entries</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>System model (3)</h2>
+
+<ul>
+  <li>tx書き込みはcacheにあるpageに対して行う</li>
+  <li>pageデータの移動
+    <ul>
+      <li>fetch : Stable database =&gt; Database cache</li>
+      <li>flush : Database cache =&gt; Stable database</li>
+    </ul>
+  </li>
+  <li>log entryの移動
+    <ul>
+      <li>force : Log buffer =&gt; Stable log</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>System model (4)</h2>
+
+<ul>
+  <li>pageに対してどの書き込みまでが適用されたかをtrackingするため、page sequence numberを埋め込んでおく
+    <ul>
+      <li>適用済みの書き込みを再度実行しないため</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Correctness criterion</h2>
+
+<ul>
+  <li>crash後、recoveryを経て「cached databaseが”commit済みtx実行後”と等価」になればよい</li>
+  <li>そのためには、典型的には以下が必要
+    <ul>
+      <li>redo: flushされなかったcommit済みtxの書き込みを取り込む</li>
+      <li>undo: commitされていないtxの書き込みのうちflushされたものを取り消す</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Logging rules</h2>
+
+<ul>
+  <li>必要な情報をdiskに残しつつ、不要な情報を消してrecoveryを高速化するべく、以下のrulesを満たすように通常処理を行っていく
+    <ul>
+      <li>redo logging rule</li>
+      <li>undo logging rule</li>
+      <li>garbage collection rule</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Redo logging rule</h2>
+
+<ul>
+  <li>
+    <p>commitされたtxの書き込みはdisk(stable database or stable log)に含まれていなければならない</p>
+  </li>
+  <li>実際のところ、commit log entryの有無が”commitされたかどうか”を表す</li>
+  <li>redoに必要な情報がdiskにあることを保証</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Undo logging rule</h2>
+
+<ul>
+  <li>
+    <p>commit or rollbackされていないtxの書き込みがstable databaseにあるなら、その書き込みはstable logにも含まれる</p>
+  </li>
+  <li>undoに必要な情報がdiskにあることを保証</li>
+  <li>このときのlog entryは、undoできるように元のpageデータなどを含む</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Garbage collection rule</h2>
+
+<ul>
+  <li>txの書き込み$p$がstable logに無いのであれば、以下のどちらか
+    <ol>
+      <li>txはcommit済みで、$p$はstable databaseに反映済み</li>
+      <li>txはcommitされておらず、$p$はstable databaseに反映されていない</li>
+    </ol>
+  </li>
+  <li>1,2どちらも、$p$のlog entryはredo/undoともに不要と言っている。つまり、$p$がstable logから消されるのは不要になってから</li>
+</ul>
+
+</section>
+<section>
+
+<h2>No-undo (no-steal) algorithm</h2>
+
+<ul>
+  <li>undoは必要なのか?</li>
+  <li>たとえば、cache managerが空きを作るためにcommit前のdirty pageをflushする(stealする)から、undoが必要になる
+    <ul>
+      <li>そういうことはしないcache managerであれば、undoは不要。ただし
+        <ul>
+          <li>メモリに載り切らないtxを処理できない(最近はメモリが増えて問題にならなくなってきた)</li>
+          <li>長いtxがあるとpageが枯渇していく</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>これまではほぼundoアリが選ばれてきている</li>
+</ul>
+
+</section>
+<section>
+
+<h2>No-redo (force) algorithm</h2>
+
+<ul>
+  <li>redoは必要なのか?</li>
+  <li>commit時に書き込みのあったpageをすべてflushすれば、redoは不要になる
+    <ul>
+      <li>が、ランダム書き込みが致命的に遅い(少なくともharddiskでは)</li>
+    </ul>
+  </li>
+  <li>これまではほぼredoアリが選ばれてきている</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>Page model crash recovery algorithms</h2>
+
+<ul>
+  <li>CSRかつLog recoverableなschedulerを仮定
+    <ul>
+      <li>つまり、prefix reducible</li>
+    </ul>
+  </li>
+  <li>diskは死なないものとする</li>
+  <li>With-redo / with-undoを考える</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Normal operations (1)</h2>
+
+<ul>
+  <li>fetch : stable dbからcached dbにpageをコピー
+    <ul>
+      <li>status: cleanとする</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Normal operations (2)</h2>
+
+<ul>
+  <li>write : page変更をcached databaseに適用
+    <ul>
+      <li>status: cleanだったらdirtyにする</li>
+      <li>log bufferにredo/undo可能なentryを追加</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Normal operations (3)</h2>
+
+<ul>
+  <li>flush : dirty pageをstable dbに書く
+    <ul>
+      <li>log bufferに対象pageのentryがあればforce()</li>
+      <li>書き込み</li>
+      <li>cached dbのpageをstatus: cleanにする</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Normal operations (4)</h2>
+
+<ul>
+  <li>force : log bufferの中身をstable logに移動
+    <ul>
+      <li>log bufferの中身を全て書き込み</li>
+      <li>fsync()待ち</li>
+      <li>log bufferを空にする</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Normal operations (5)</h2>
+
+<ul>
+  <li>begin : tx開始
+    <ul>
+      <li>activeなtxを作成</li>
+      <li>log bufferに”begin” entryを追加</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Normal operations (6)</h2>
+
+<ul>
+  <li>commit : txの書き込みを反映
+    <ul>
+      <li>“commit” log entryを作成</li>
+      <li>txをactiveでなくする</li>
+      <li>force()</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Normal operations (7)</h2>
+
+<ul>
+  <li>redo logging rule:
+    <ul>
+      <li>commitでforceする際にすべての書き込みがstable logに入るので、OK</li>
+    </ul>
+  </li>
+  <li>undo logging rule:
+    <ul>
+      <li>stable dbにpageが入るのはflush時だが、ここで必要ならforceしているので、OK</li>
+    </ul>
+  </li>
+  <li>GC logging ruleは:
+    <ul>
+      <li>ここではGCしてないので問題なし</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Redo-winners / redo-history (1)</h2>
+
+<ul>
+  <li>Redo-winners paradigm
+    <ul>
+      <li>“winner-“(crash時点でcommit済みの)txのみredoする</li>
+    </ul>
+  </li>
+  <li>Redo-history paradigm
+    <ul>
+      <li>winner/loser関係なく、logにあるhistoryのとおりにredoする</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Redo-winners / redo-history (2)</h2>
+
+<ul>
+  <li>redo-winnersのメリット
+    <ul>
+      <li>“losers”を除外できる(割合は多くないはずで、メリットは小さい)</li>
+    </ul>
+  </li>
+  <li>redo-winnersのデメリット
+    <ul>
+      <li>(詳細省くが)losersのlogをGCできるタイミングが難しい</li>
+    </ul>
+  </li>
+  <li>redo-historyのメリット
+    <ul>
+      <li>winners, losers, aborted txを統一的に扱える</li>
+    </ul>
+  </li>
+  <li>=&gt; 総合的に言ってredo-historyがベターと見られている</li>
+</ul>
+
+</section>
+<section>
+
+<h2>3-pass algorithm</h2>
+
+<ul>
+  <li>Analysis pass</li>
+  <li>Redo pass</li>
+  <li>Undo pass</li>
+  <li>(analysis passとredo passを1回にまとめて2-passでもよい)</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Analysis pass</h2>
+
+<ul>
+  <li>stable logを順にたどってlosersを特定する
+    <ul>
+      <li>commit log entryがないtxはloser</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Redo pass</h2>
+
+<ul>
+  <li>再度logをscanしてstable databaseに反映されていないactionを実行</li>
+  <li>具体的にはpageごとに
+    <ul>
+      <li>stable dbからcached dbにpageをfetch</li>
+      <li>page seq noを見て適用前であれば、cached pageに適用</li>
+    </ul>
+  </li>
+  <li>winner/loser関係なくリプレイ</li>
+  <li>これによりcrash直前のcached dbが再現される</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Undo pass</h2>
+
+<ul>
+  <li>loser txsのlogを逆にたどっていき、通常abortと同様にrollbackする</li>
+  <li>ただしpageごとのlockはcrashで消失しているため、undo pass完了まで新規txは受け付けられない</li>
+  <li>通常rollback処理なので、ここで新たにlog entryが生成される点に注意</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Compensation log entries</h2>
+
+<ul>
+  <li>undo passでのrollbackはcompensation log entryを作る
+    <ul>
+      <li>loser txで実行された処理に追加される</li>
+    </ul>
+  </li>
+  <li>rollback完了前に再度crashした後のrecoveryは以下のようになる
+    <ul>
+      <li>(redo pass) compensation logをredo</li>
+      <li>(undo pass) compensation logをundo</li>
+      <li>(undo pass) 最初のcrash前の処理のundo</li>
+    </ul>
+  </li>
+  <li>なんだかややこしいが、実際は機械的に処理するだけ(らしい)</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Recovery performance optimizations</h2>
+
+<ul>
+  <li>ここまでの単純なalgorithmでちゃんとrecoverできるが、無駄が多いので改良を考える
+    <ul>
+      <li>Log truncation</li>
+      <li>Checkpoints</li>
+      <li>reduce page fetches during redo pass</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Log truncation (1)</h2>
+
+<ul>
+  <li>DB起動後のすべてのlogを扱っていては遅すぎる</li>
+  <li>redoにもundoにも不要になったlog entriesは読み飛ばしたい</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Log truncation (2)</h2>
+
+<ul>
+  <li>redo用の情報
+    <ul>
+      <li>dirtyなpageには最後のflushから次のwriteのlog seq no</li>
+      <li>dirtyなpageすべてで最も古いredo seq noを保持 : “system redo LSN”</li>
+    </ul>
+  </li>
+  <li>undo用の情報
+    <ul>
+      <li>active txの”begin”のlog seq noを覚えておく</li>
+      <li>すべてのactive txのうち最も古いlog seq no : “oldest undo LSN”</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Log truncation (3)</h2>
+
+<ul>
+  <li>“system redo LSN”と”oldest undo LSN”を定期的に特別なファイルに書く</li>
+  <li>次回crash時にはlog scan開始地点としてこれを使う</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Periodic checkpoints (1)</h2>
+
+<ul>
+  <li>dirtyなpageをすべてflushすれば、”system redo LSN”をlog末尾まで進められる
+    <ul>
+      <li>“heavyweight checkpoint”</li>
+    </ul>
+  </li>
+  <li>ただ、一気にランダム書き込みすると通常処理に悪影響を与えうるので、代替案を考える</li>
+</ul>
+
+</section>
+<section>
+
+<h2>Periodic checkpoints (2)</h2>
+
+<ul>
+  <li>flushをある程度進めるのは有効。負荷が高くないときに少しずつ行う
+    <ul>
+      <li>“write-behind daemon”</li>
+    </ul>
+  </li>
+  <li>“system redo LSN”からcheckpoint作成時の間のlog entryのうち大部分をskipしたい
+    <ul>
+      <li>つまり「flush済みでredo不要なlog entry」を飛ばしたい</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h2>Periodic checkpoints (3)</h2>
+
+<ul>
+  <li>checkpoint log entryを作り、以下を書き込む
+    <ul>
+      <li>その時点における”dirtyなpage”と”そのpageのredo LSN”のリスト</li>
+    </ul>
+  </li>
+  <li>checkpoint以降に発生したcrashでは、checkpoint前のlogのうちredoで不要なところを飛ばせる</li>
+</ul>
 
 </section>
 </section>

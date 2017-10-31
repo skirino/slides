@@ -770,4 +770,344 @@
 ***
 ***
 
-To be continued...
+## 任意のタイミングでのcrash
+
+- 電源OFF
+- カーネルパニック
+- kill -9
+- segmentation fault
+- ...
+
+- 常にdurableでなければならない
+
+---
+
+## ここで対象とするcrash
+
+- ディスク上のデータは無事
+    - crash前に書き込まれたデータを読める
+- 問題発生後もプロセスが走り続ける状況は考えない
+    - sanity check(assert)を適宜入れておけばほぼ大丈夫
+
+---
+
+## 目標
+
+- crash後のrecoveryにより
+    - commit済みtxの書き込みが残る
+    - commitされていないtxの書き込みが残らない
+- 当然、復旧完了までが短い方がよい
+- 通常処理に与えるoverheadも小さい方がよい
+
+---
+
+## crash recoveryの特殊性
+
+- 通常時の動作よりもdebug, testがより難しい
+    - crashはrare
+    - recovery中に再度crashしても大丈夫?
+- critical
+    - bugがあると大事なデータが失われる
+- => invariantsをちゃんと考える必要がある
+
+---
+
+## System model (1)
+
+- recoveryに必要な情報を常にdisk上に用意しなければならない
+- => logのような形で随時追記していくほかない
+
+---
+
+## System model (2)
+
+- Stable database
+    - Set of pages in disk
+- Database cache
+    - Subset of stable database pages copied into memory
+- Stable log
+    - On disk log entries for bookkeeping
+- Log buffer
+    - In-memory buffer for log entries
+
+---
+
+## System model (3)
+
+- tx書き込みはcacheにあるpageに対して行う
+- pageデータの移動
+    - fetch : Stable database => Database cache
+    - flush : Database cache => Stable database
+- log entryの移動
+    - force : Log buffer => Stable log
+
+---
+
+## System model (4)
+
+- pageに対してどの書き込みまでが適用されたかをtrackingするため、page sequence numberを埋め込んでおく
+    - 適用済みの書き込みを再度実行しないため
+
+---
+
+## Correctness criterion
+
+- crash後、recoveryを経て「cached databaseが"commit済みtx実行後"と等価」になればよい
+- そのためには、典型的には以下が必要
+    - redo: flushされなかったcommit済みtxの書き込みを取り込む
+    - undo: commitされていないtxの書き込みのうちflushされたものを取り消す
+
+---
+
+## Logging rules
+
+- 必要な情報をdiskに残しつつ、不要な情報を消してrecoveryを高速化するべく、以下のrulesを満たすように通常処理を行っていく
+    - redo logging rule
+    - undo logging rule
+    - garbage collection rule
+
+---
+
+## Redo logging rule
+
+- commitされたtxの書き込みはdisk(stable database or stable log)に含まれていなければならない
+
+- 実際のところ、commit log entryの有無が"commitされたかどうか"を表す
+- redoに必要な情報がdiskにあることを保証
+
+---
+
+## Undo logging rule
+
+- commit or rollbackされていないtxの書き込みがstable databaseにあるなら、その書き込みはstable logにも含まれる
+
+- undoに必要な情報がdiskにあることを保証
+- このときのlog entryは、undoできるように元のpageデータなどを含む
+
+---
+
+## Garbage collection rule
+
+- txの書き込み$p$がstable logに無いのであれば、以下のどちらか
+    1. txはcommit済みで、$p$はstable databaseに反映済み
+    2. txはcommitされておらず、$p$はstable databaseに反映されていない
+- 1,2どちらも、$p$のlog entryはredo/undoともに不要と言っている。つまり、$p$がstable logから消されるのは不要になってから
+
+---
+
+## No-undo (no-steal) algorithm
+
+- undoは必要なのか?
+- たとえば、cache managerが空きを作るためにcommit前のdirty pageをflushする(stealする)から、undoが必要になる
+    - そういうことはしないcache managerであれば、undoは不要。ただし
+        - メモリに載り切らないtxを処理できない(最近はメモリが増えて問題にならなくなってきた)
+        - 長いtxがあるとpageが枯渇していく
+- これまではほぼundoアリが選ばれてきている
+
+---
+
+## No-redo (force) algorithm
+
+- redoは必要なのか?
+- commit時に書き込みのあったpageをすべてflushすれば、redoは不要になる
+    - が、ランダム書き込みが致命的に遅い(少なくともharddiskでは)
+- これまではほぼredoアリが選ばれてきている
+
+***
+***
+
+## Page model crash recovery algorithms
+
+- CSRかつLog recoverableなschedulerを仮定
+    - つまり、prefix reducible
+- diskは死なないものとする
+- With-redo / with-undoを考える
+
+---
+
+## Normal operations (1)
+
+- fetch : stable dbからcached dbにpageをコピー
+    - status: cleanとする
+
+---
+
+## Normal operations (2)
+
+- write : page変更をcached databaseに適用
+    - status: cleanだったらdirtyにする
+    - log bufferにredo/undo可能なentryを追加
+
+---
+
+## Normal operations (3)
+
+- flush : dirty pageをstable dbに書く
+    - log bufferに対象pageのentryがあればforce()
+    - 書き込み
+    - cached dbのpageをstatus: cleanにする
+
+---
+
+## Normal operations (4)
+
+- force : log bufferの中身をstable logに移動
+    - log bufferの中身を全て書き込み
+    - fsync()待ち
+    - log bufferを空にする
+
+---
+
+## Normal operations (5)
+
+- begin : tx開始
+    - activeなtxを作成
+    - log bufferに"begin" entryを追加
+
+---
+
+## Normal operations (6)
+
+- commit : txの書き込みを反映
+    - "commit" log entryを作成
+    - txをactiveでなくする
+    - force()
+
+---
+
+## Normal operations (7)
+
+- redo logging rule:
+    - commitでforceする際にすべての書き込みがstable logに入るので、OK
+- undo logging rule:
+    - stable dbにpageが入るのはflush時だが、ここで必要ならforceしているので、OK
+- GC logging ruleは:
+    - ここではGCしてないので問題なし
+
+---
+
+## Redo-winners / redo-history (1)
+
+- Redo-winners paradigm
+    - "winner-"(crash時点でcommit済みの)txのみredoする
+- Redo-history paradigm
+    - winner/loser関係なく、logにあるhistoryのとおりにredoする
+
+---
+
+## Redo-winners / redo-history (2)
+
+- redo-winnersのメリット
+    - "losers"を除外できる(割合は多くないはずで、メリットは小さい)
+- redo-winnersのデメリット
+    - (詳細省くが)losersのlogをGCできるタイミングが難しい
+- redo-historyのメリット
+    - winners, losers, aborted txを統一的に扱える
+
+- => 総合的に言ってredo-historyがベターと見られている
+
+---
+
+## 3-pass algorithm
+
+- Analysis pass
+- Redo pass
+- Undo pass
+- (analysis passとredo passを1回にまとめて2-passでもよい)
+
+---
+
+## Analysis pass
+
+- stable logを順にたどってlosersを特定する
+    - commit log entryがないtxはloser
+
+---
+
+## Redo pass
+
+- 再度logをscanしてstable databaseに反映されていないactionを実行
+- 具体的にはpageごとに
+    - stable dbからcached dbにpageをfetch
+    - page seq noを見て適用前であれば、cached pageに適用
+- winner/loser関係なくリプレイ
+- これによりcrash直前のcached dbが再現される
+
+---
+
+## Undo pass
+
+- loser txsのlogを逆にたどっていき、通常abortと同様にrollbackする
+- ただしpageごとのlockはcrashで消失しているため、undo pass完了まで新規txは受け付けられない
+- 通常rollback処理なので、ここで新たにlog entryが生成される点に注意
+
+---
+
+## Compensation log entries
+
+- undo passでのrollbackはcompensation log entryを作る
+    - loser txで実行された処理に追加される
+- rollback完了前に再度crashした後のrecoveryは以下のようになる
+    - (redo pass) compensation logをredo
+    - (undo pass) compensation logをundo
+    - (undo pass) 最初のcrash前の処理のundo
+- なんだかややこしいが、実際は機械的に処理するだけ(らしい)
+
+---
+
+## Recovery performance optimizations
+
+- ここまでの単純なalgorithmでちゃんとrecoverできるが、無駄が多いので改良を考える
+    - Log truncation
+    - Checkpoints
+    - reduce page fetches during redo pass
+
+---
+
+## Log truncation (1)
+
+- DB起動後のすべてのlogを扱っていては遅すぎる
+- redoにもundoにも不要になったlog entriesは読み飛ばしたい
+
+---
+
+## Log truncation (2)
+
+- redo用の情報
+    - dirtyなpageには最後のflushから次のwriteのlog seq no
+    - dirtyなpageすべてで最も古いredo seq noを保持 : "system redo LSN"
+- undo用の情報
+    - active txの"begin"のlog seq noを覚えておく
+    - すべてのactive txのうち最も古いlog seq no : "oldest undo LSN"
+
+---
+
+## Log truncation (3)
+
+- "system redo LSN"と"oldest undo LSN"を定期的に特別なファイルに書く
+- 次回crash時にはlog scan開始地点としてこれを使う
+
+---
+
+## Periodic checkpoints (1)
+
+- dirtyなpageをすべてflushすれば、"system redo LSN"をlog末尾まで進められる
+    - "heavyweight checkpoint"
+- ただ、一気にランダム書き込みすると通常処理に悪影響を与えうるので、代替案を考える
+
+---
+
+## Periodic checkpoints (2)
+
+- flushをある程度進めるのは有効。負荷が高くないときに少しずつ行う
+    - "write-behind daemon"
+- "system redo LSN"からcheckpoint作成時の間のlog entryのうち大部分をskipしたい
+    - つまり「flush済みでredo不要なlog entry」を飛ばしたい
+
+---
+
+## Periodic checkpoints (3)
+
+- checkpoint log entryを作り、以下を書き込む
+    - その時点における"dirtyなpage"と"そのpageのredo LSN"のリスト
+- checkpoint以降に発生したcrashでは、checkpoint前のlogのうちredoで不要なところを飛ばせる
