@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+<title>Hot code upgrade in ACCESS</title>
+
+<meta name="description" content="">
+<meta name="author" content="Shunsuke Kirino">
+<meta name="generator" content="reveal-ck 3.5.1">
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h2>Hot code upgrade in ACCESS</h2>
+
+<p>桐野 俊輔 (<a href="https://github.com/skirino">skirino</a>) @ <a href="http://jp.access-company.com/">ACCESS</a></p>
+
+<p><a href="https://beam-lang.connpass.com/event/70973/">Tokyo.ex #8</a> (2017/11/26)</p>
+
+</section>
+<section>
+<section>
+
+<ol>
+  <li>Hot code upgradeの仕組み<br>
+ a. ErlangVMの提供する機能<br>
+ b. OTPの提供する機能</li>
+  <li>ACCESSでの運用状況・設計判断について紹介</li>
+</ol>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>Hot code upgradeの仕組み</h2>
+
+</section>
+<section>
+
+<h3>Hot code upgradeとは</h3>
+
+<ul>
+  <li>ErlangVMの実行を止めずにコードを更新できる</li>
+  <li>Erlang/OTPの強みの1つとされることが多い</li>
+  <li>が、あまり情報が出回ってない
+    <ul>
+      <li>実運用してる人はわりと少ないようだ</li>
+    </ul>
+  </li>
+  <li>「やめておけ」と言われることが多い(<a href="http://learnyousomeerlang.com/relups#the-ninth-circle-of-erl">ここ</a>とか)</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Pros</h3>
+
+<ul>
+  <li>OSプロセスが生き続けるので、メモリ上のデータ・TCPコネクションなどを維持できる</li>
+  <li>Load balancerの向き先などを変更しなくてよい</li>
+  <li>ErlangVM再起動などの手段よりも速い</li>
+  <li>(なんだかかっこいい)</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Cons</h3>
+
+<ul>
+  <li>正しくやるのは難しい
+    <ul>
+      <li>コード変更内容に応じて更新時の処理が違う</li>
+      <li>特にテストをきっちりやるのは困難
+        <ul>
+          <li>変更内容に応じて毎回状況が違う</li>
+          <li>prod環境のプロセス内部状態(厳密には負荷状況も)を再現しなければならない</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Module loading</h3>
+
+<ul>
+  <li>ErlangVMはmodule単位でコードを管理する</li>
+  <li>コンパイラは各moduleのソースコードからbeamファイルを作る</li>
+  <li>ErlangVM起動後、beamファイルを読み込んで実行
+    <ul>
+      <li>beamファイルの読み込み操作などのAPIが提供されているので、Erlang/Elixirから挙動をプログラミングできる
+        <ul>
+          <li>
+<a href="http://erlang.org/doc/man/code.html">:code</a>, <a href="https://hexdocs.pm/elixir/Code.html">Code</a>, <a href="https://hexdocs.pm/iex/IEx.Helpers.html">IEx.Helpers</a>
+</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>How hot code upgrade works (1)</h3>
+
+<ul>
+  <li>ErlangVMは各moduleの中身を2バージョンまで保持する
+    <ul>
+      <li>
+<code>"current"</code>と<code>"old"</code>
+</li>
+    </ul>
+  </li>
+  <li>
+<code>current</code>と<code>old</code>のコードはどちらも実行可能</li>
+  <li>“新規の”関数呼び出しは<code>current</code>を使う
+    <ul>
+      <li>モジュール名を指定せずに同一モジュールの関数を呼ぶ場合(local call)は”新規”ではない</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>How hot code upgrade works (2)</h3>
+
+<ul>
+  <li>新しいバージョンのmoduleをロードしたとき
+    <ul>
+      <li>ロードしたバージョンを<code>current</code>に</li>
+      <li>
+<code>current</code>を<code>old</code>にする</li>
+      <li>
+<code>old</code>を捨てる
+        <ul>
+          <li>その際<code>old</code>を実行中のプロセスはbrutal kill
+            <ul>
+              <li>stacktraceが残ってれば”実行中”</li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>注意点</h3>
+
+<ul>
+  <li>killされないよう、<code>old</code>から<code>current</code>に切り替わるようにしなければならない
+    <ul>
+      <li>普通に<code>GenServer</code>などを書いてればだいたい大丈夫</li>
+    </ul>
+  </li>
+  <li>一部の操作は<code>old</code>を消して<code>current</code>だけにしようとする
+    <ul>
+      <li>やはり<code>old</code>実行中プロセスがkillされる</li>
+      <li>たとえば<a href="http://erlang.org/doc/man/release_handler.html#make_permanent-1"><code>:release_handler.make_permanent/1</code></a>をテキトーに呼ぶと危険</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>Demo</h2>
+
+</section>
+<section>
+
+<h3>Demo (1)</h3>
+
+<ul>
+  <li>次のスライドのコードを<code>loop.ex</code>などとして保存</li>
+  <li>iexから以下でループ開始
+    <ul>
+      <li><code>&gt; c("loop.ex")</code></li>
+      <li><code>&gt; spawn_link(fn -&gt; Loop.loop(0) end)</code></li>
+    </ul>
+  </li>
+  <li>コードを書き換えて、再度 <code>&gt; c("loop.ex")</code>を試す</li>
+</ul>
+
+</section>
+<section>
+
+<pre><code class="language-ex">defmodule Loop do
+  def loop(n) do
+    Enum.each(1..20, fn i -&gt;
+      :timer.sleep(1_000)
+      IO.inspect({n, i, str(), __MODULE__.str()}) # local and remote call
+    end)
+    __MODULE__.loop(n + 1) # remote and tail-recursive call
+  end
+
+  def str() do
+    "str/0 version1" # change this and reload!
+  end
+end
+</code></pre>
+
+</section>
+<section>
+
+<h3>Demo (2)</h3>
+
+<ul>
+  <li>一度新バージョンのコードを実行しても、callstackが残っていると移行しきれない</li>
+  <li>旧バージョンが完全になくなるのは、<code>loop/1</code>の末尾再帰のとき
+    <ul>
+      <li>末尾再帰がremote callでない場合、oldのままで更新されず、次バージョンのload時にkill</li>
+    </ul>
+  </li>
+  <li>移行しきる前に2回loadするとkill</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>Hot code upgrade and OTP</h2>
+
+</section>
+<section>
+
+<h3>OTP special processes (<code>GenServer</code>など)</h3>
+
+<ul>
+  <li>module差し替えだけで済まない場合がある
+    <ul>
+      <li>プロセスの持つデータの移行</li>
+    </ul>
+  </li>
+  <li>
+<a href="http://erlang.org/doc/design_principles/release_handling.html#instr">code_changeの仕組み</a>
+    <ul>
+      <li>更新対象のcallback moduleを使っている全プロセスで処理を中断させる</li>
+      <li>
+<a href="http://erlang.org/doc/man/gen_server.html#Module:code_change-3"><code>code_change/3</code> callback</a>でデータ移行</li>
+      <li>通常の処理を再開</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>
+<code>code_change/3</code>のデメリット</h3>
+
+<ul>
+  <li>一連の挙動はsystem messageのやり取りで実現されている
+    <ul>
+      <li>けっこう無駄なやり取りが多い</li>
+      <li>system messageへの応答が通常処理でブロックされうる。5秒タイムアウトで強制kill</li>
+      <li>一部のライブラリが定義するプロセスでは、system messageをちゃんとhandleしてくれない場合がある</li>
+    </ul>
+  </li>
+  <li>suspendしている間は処理が滞る
+    <ul>
+      <li>対象プロセス群の内部状態をatomicに更新するが、こんな重量級の仕組みはいらない場合も多い</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>OTP application/release</h3>
+
+<ul>
+  <li>OTP application:
+    <ul>
+      <li>beamファイルと設定ファイルからなるパッケージングの単位</li>
+      <li>
+<a href="http://erlang.org/doc/man/appup.html">appup</a>ファイル: バージョン更新処理を定義する
+        <ul>
+          <li>“<code>code_change/3</code>でデータ移行”もここで指定</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>OTP release:
+    <ul>
+      <li>複数のOTP applicationsをErlangVMとセットにしたもの</li>
+      <li>
+<a href="http://erlang.org/doc/man/relup.html">relup</a>ファイル: <code>appup</code>ファイル群をまとめたもの</li>
+      <li>release単位で更新を適用する方法が定義されている(<a href="http://erlang.org/doc/man/release_handler.html">:release_handler</a>)</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>release一式を生成するツールたち</h3>
+
+<ul>
+  <li>
+<a href="http://erlang.org/doc/man/systools.html">systools</a>: Erlang同梱(詳細不明)</li>
+  <li>
+<a href="http://erlang.org/doc/man/reltool.html">reltool</a>: Erlang同梱(詳細不明)</li>
+  <li>
+<a href="https://github.com/erlware/relx">relx</a>: 起動スクリプトもセットで便利、systoolsに依存(使っている)</li>
+  <li>
+<a href="https://github.com/bitwalker/exrm">exrm</a>: Elixir用、relxベース(一時使っていたが今は使ってない)</li>
+  <li>
+<a href="https://github.com/bitwalker/distillery">distillery</a>: pure Elixir(使ってない)</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h2>ACCESSにおける運用状況</h2>
+
+</section>
+<section>
+
+<h3>solomonについて</h3>
+
+<ul>
+  <li>社内PaaS</li>
+  <li>AWSで稼働中</li>
+  <li>社内の各チームがそれぞれOTP applicationを作る</li>
+  <li>solomon coreチームがまとめて運用</li>
+  <li>(いろいろしゃべりたいが、時間の都合で略)</li>
+</ul>
+
+</section>
+<section>
+
+<h3>自動デプロイ方針</h3>
+
+<ul>
+  <li>solomon本体の更新はreleaseを作って<a href="http://erlang.org/doc/man/release_handler.html#install_release-1"><code>:release_handler.install_release/2</code></a>で取り込む(hot code upgrade)</li>
+  <li>各チームのOTP appの更新は<a href="http://erlang.org/doc/man/release_handler.html#upgrade_app-2"><code>:release_handler.upgrade_app/2</code></a>で取り込む(hot code upgrade)</li>
+  <li>“ややこしい”更新は特別扱いして、EC2インスタンス入れ替えで適用する</li>
+  <li>hot code upgradeの際には<code>code_change/3</code>しない
+    <ul>
+      <li>
+<code>update</code>ではなく<code>load_module</code>を使う単純なappupを生成するツールを自作</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>“ややこしい”更新について</h3>
+
+<ul>
+  <li>以下のような更新はgitコミットメッセージに固定文字列を入れておく
+    <ul>
+      <li>プロセス内部状態の変更</li>
+      <li>supervision treeの構造変更など、初期化処理の変更</li>
+    </ul>
+  </li>
+  <li>デプロイの際、変更分のコミットメッセージを見てデプロイ方式を切り替え</li>
+</ul>
+
+</section>
+<section>
+
+<h3>
+<code>code_change/3</code>を使わない理由</h3>
+
+<ul>
+  <li>(デメリットについては前述)</li>
+  <li>
+<a href="https://github.com/ninenines/cowboy/issues/1126">cowboy websocketプロセスがsystem messageに応答しない</a>
+    <ul>
+      <li>suspendのためsystem messageが送られると、websocketプロセスがcrashして<a href="http://erlang.org/doc/man/init.html#restart-0"><code>:init.restart/0</code></a>になる</li>
+    </ul>
+  </li>
+  <li>動作検証が割に合わない
+    <ul>
+      <li>1回きりの<code>code_change/3</code>のためにテスト書きたくない
+        <ul>
+          <li>更新内容に応じて状況を再現するのもしんどい</li>
+        </ul>
+      </li>
+      <li>インスタンス追加なら更新内容に依らず、同じようにクラスタに参加するだけ</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>
+<code>code_change/3</code>の代替案</h3>
+
+<ul>
+  <li>
+<code>code_change/3</code>に相当するコードを<code>handle_*</code>の最初に呼び出してデータ移行することもある</li>
+  <li>単にプロセス内部状態を切り替えるだけ(同じmoduleを使う全プロセスでsyncする必要が無い)ならこれで良い</li>
+  <li>ただし以下は問題になりうる
+    <ul>
+      <li>移行処理が何度も呼ばれる。idempotentにして、余計な処理はしない</li>
+      <li>一度もmessageが来ないプロセスでは移行処理も走らない</li>
+    </ul>
+  </li>
+  <li>pros/consを比べて、インスタンス入れ替えと使い分ける</li>
+</ul>
+
+</section>
+<section>
+
+<h3>hot code upgradeの意義</h3>
+
+<ul>
+  <li>インスタンス入れ替えだけでもまあまあOKだが、以下のためなるべくhot code upgradeを使いたい
+    <ul>
+      <li>1日に何十回もデプロイしようと思うと、インスタンス入れ替えは遅すぎる</li>
+      <li>websocket connectionをそのままキープしたい</li>
+      <li>
+<a href="https://github.com/skirino/raft_fleet">raft_fleet</a>のprocess rebalancingは比較的重いので避けたい</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Summary</h3>
+
+<ul>
+  <li>hot code upgradeそのものは有用だが、OTPにあまり頼り過ぎると良くない場合もある
+    <ul>
+      <li>
+<code>GenServer</code>ばかり書いていると<code>code_change/3</code>が目立つが、これが役に立つのは限られた状況のみ</li>
+    </ul>
+  </li>
+  <li>hot code upgradeだけでやろうとせず、インスタンス入れ替え方式にfallbackできるように用意しておくといい</li>
+</ul>
+
+</section>
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'page',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+  var configOptions = {"dependencies":[{"src":"plugin/math/math.js","async":true}],"math":{"mathjax":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"}}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>

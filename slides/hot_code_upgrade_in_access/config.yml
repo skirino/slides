@@ -1,0 +1,10 @@
+theme:      "night"
+transition: "page"
+author:     "Shunsuke Kirino"
+title:      "Hot code upgrade in ACCESS"
+revealjs_config:
+  dependencies:
+    - src:   "plugin/math/math.js"
+      async: true
+  math:
+    mathjax: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"
