@@ -1,13 +1,15 @@
 <!doctype html>
 <html lang="en">
-  <head>
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
     <meta charset="utf-8">
 
 <title>Introduction to raft_fleet</title>
 
 <meta name="description" content="">
 <meta name="author" content="Shunsuke Kirino">
-<meta name="generator" content="reveal-ck 3.5.1">
+<meta name="generator" content="reveal-ck 3.8.0">
+
+
 
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -384,7 +386,7 @@
   <li>For this purpose, <code>raft_fleet</code>
     <ul>
       <li>defines process naming scheme</li>
-      <li>implements process placement algorithm (<a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">randezvous hashing</a>)</li>
+      <li>implements process placement algorithm (<a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">rendezvous hashing</a>)</li>
       <li>manages consensus on current cluster status (participating nodes, consensus groups)</li>
       <li>automatically re-balance consensus members</li>
     </ul>
@@ -442,7 +444,7 @@
 <section>
 
 <h3>
-<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - <a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">randezvous hashing</a> (1)</h3>
+<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - <a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">rendezvous hashing</a> (1)</h3>
 
 <ul>
   <li>Motivation of the algorithm
@@ -474,7 +476,7 @@
 <section>
 
 <h3>
-<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - <a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">randezvous hashing</a> (2)</h3>
+<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - <a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">rendezvous hashing</a> (2)</h3>
 
 <ul>
   <li>Algorithm
@@ -483,7 +485,7 @@
       <li>take members with least (highest) weights</li>
     </ul>
   </li>
-  <li>Compared with <a href="https://en.wikipedia.org/wiki/Consistent_hashing">consistent hashing</a>, randezvous hashing
+  <li>Compared with <a href="https://en.wikipedia.org/wiki/Consistent_hashing">consistent hashing</a>, rendezvous hashing
     <ul>
       <li>is much simpler</li>
       <li>naturally integrates data center-aware placement</li>
@@ -496,7 +498,7 @@
 <section>
 
 <h3>
-<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - <a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">randezvous hashing</a> (3)</h3>
+<a href="https://github.com/skirino/raft_fleet">raft_fleet</a> - <a href="https://en.wikipedia.org/wiki/Rendezvous_hashing">rendezvous hashing</a> (3)</h3>
 
 <pre><code class="language-ex">defun lrw_members(nodes_per_zone :: %{ZoneInfo.t =&gt; [node]}, group :: atom, n_replica :: pos_integer) :: [node] do
   Enum.flat_map(nodes_per_zone, fn {_z, ns} -&gt;
@@ -707,6 +709,7 @@ end
 <script src="lib/js/head.min.js"></script>
 <script src="js/reveal.js"></script>
 
+
 <script>
   (function() {
   function extend( a, b ) {
@@ -726,6 +729,9 @@ end
       { src: 'plugin/notes/notes.js', async: true }
     ]
   };
+
+  
+
   var configOptions = {"controls":true,"progress":true,"history":true,"center":true}
   var initializeOptions = {};
   extend(initializeOptions, baseOptions);

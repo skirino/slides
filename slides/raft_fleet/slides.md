@@ -177,7 +177,7 @@
 - Run multiple `rafted_value` processes within a cluster of ErlangVMs
 - For this purpose, `raft_fleet`
     - defines process naming scheme
-    - implements process placement algorithm ([randezvous hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing))
+    - implements process placement algorithm ([rendezvous hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing))
     - manages consensus on current cluster status (participating nodes, consensus groups)
     - automatically re-balance consensus members
 - Users of `raft_fleet` define "state" and operations on it by implementing [`RaftedValue.Data`](https://hexdocs.pm/rafted_value/RaftedValue.Data.html) behaviour
@@ -209,7 +209,7 @@
 
 ---
 
-### [raft_fleet](https://github.com/skirino/raft_fleet) - [randezvous hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) (1)
+### [raft_fleet](https://github.com/skirino/raft_fleet) - [rendezvous hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) (1)
 
 - Motivation of the algorithm
     - want to assign members to each node
@@ -223,19 +223,19 @@
 
 ---
 
-### [raft_fleet](https://github.com/skirino/raft_fleet) - [randezvous hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) (2)
+### [raft_fleet](https://github.com/skirino/raft_fleet) - [rendezvous hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) (2)
 
 - Algorithm
     - sort members using "random weight" (hash value)
     - take members with least (highest) weights
-- Compared with [consistent hashing](https://en.wikipedia.org/wiki/Consistent_hashing), randezvous hashing
+- Compared with [consistent hashing](https://en.wikipedia.org/wiki/Consistent_hashing), rendezvous hashing
     - is much simpler
     - naturally integrates data center-aware placement
     - is not flexible to tweak hotspot (in the case of e.g. key-value store)
 
 ---
 
-### [raft_fleet](https://github.com/skirino/raft_fleet) - [randezvous hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) (3)
+### [raft_fleet](https://github.com/skirino/raft_fleet) - [rendezvous hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) (3)
 
 ```ex
 defun lrw_members(nodes_per_zone :: %{ZoneInfo.t => [node]}, group :: atom, n_replica :: pos_integer) :: [node] do
