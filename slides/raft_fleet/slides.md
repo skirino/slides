@@ -89,8 +89,7 @@
 ### [rafted_value](https://github.com/skirino/rafted_value) - Overview
 
 - Raft protocol implementation, including membership changes
-    - Each Raft member as a [`:gen_fsm`](http://erlang.org/doc/man/gen_fsm.html) process
-        - in retrospect [`:gen_server`](http://erlang.org/doc/man/gen_server.html) would also be OK
+    - Each Raft member as a [`:gen_statem`](http://erlang.org/doc/man/gen_statem.html) process
 - Arbitrary data structure can be replicated among members
 - Commands must be pure
     - only minimal information is included in Raft logs
@@ -112,12 +111,12 @@
 ### [rafted_value](https://github.com/skirino/rafted_value) - Implementation detail (1)
 
 - Core component is [`RaftedValue.Server`](https://github.com/skirino/rafted_value/blob/master/lib/rafted_value/server.ex) module
-    - a `:gen_fsm` with 3 states: `leader`, `candidate`, `follower`
+    - a `:gen_statem` with 3 states: `leader`, `candidate`, `follower`
     - need to handle 19 types of events
     - => 57 handlers to implement
 - Sane module- and function-level design is the key
     - unify multiple handlers
-    - hierarchical process state (nested struct)
+    - hierarchical process state (nested structs)
     - utilities with well-defined responsibilities
 
 ---
@@ -336,7 +335,7 @@ end
 
 - Bugs caught in dev/prod environment
     - Race condition between node deactivation and leader migration: assigning a process in soon-to-be-deleted node as the next leader
-        - Properly check node status before choosing the next leader
+        - Check the node status before choosing the next leader
 
 ***
 ***

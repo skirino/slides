@@ -215,11 +215,7 @@
 <ul>
   <li>Raft protocol implementation, including membership changes
     <ul>
-      <li>Each Raft member as a <a href="http://erlang.org/doc/man/gen_fsm.html"><code>:gen_fsm</code></a> process
-        <ul>
-          <li>in retrospect <a href="http://erlang.org/doc/man/gen_server.html"><code>:gen_server</code></a> would also be OK</li>
-        </ul>
-      </li>
+      <li>Each Raft member as a <a href="http://erlang.org/doc/man/gen_statem.html"><code>:gen_statem</code></a> process</li>
     </ul>
   </li>
   <li>Arbitrary data structure can be replicated among members</li>
@@ -265,7 +261,7 @@
 <ul>
   <li>Core component is <a href="https://github.com/skirino/rafted_value/blob/master/lib/rafted_value/server.ex"><code>RaftedValue.Server</code></a> module
     <ul>
-      <li>a <code>:gen_fsm</code> with 3 states: <code>leader</code>, <code>candidate</code>, <code>follower</code>
+      <li>a <code>:gen_statem</code> with 3 states: <code>leader</code>, <code>candidate</code>, <code>follower</code>
 </li>
       <li>need to handle 19 types of events</li>
       <li>=&gt; 57 handlers to implement</li>
@@ -274,7 +270,7 @@
   <li>Sane module- and function-level design is the key
     <ul>
       <li>unify multiple handlers</li>
-      <li>hierarchical process state (nested struct)</li>
+      <li>hierarchical process state (nested structs)</li>
       <li>utilities with well-defined responsibilities</li>
     </ul>
   </li>
@@ -678,7 +674,7 @@ end
     <ul>
       <li>Race condition between node deactivation and leader migration: assigning a process in soon-to-be-deleted node as the next leader
         <ul>
-          <li>Properly check node status before choosing the next leader</li>
+          <li>Check the node status before choosing the next leader</li>
         </ul>
       </li>
     </ul>
