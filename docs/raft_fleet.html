@@ -541,10 +541,10 @@ end
     <ul>
       <li>add missing member, remove extra member, replace leader with member in the desired node</li>
       <li>to avoid contention, each node manages consensus groups whose leaders are expected to be on that node</li>
-      <li>node with too many failing members will be purged</li>
-      <li>consensus group with majority failing is removed (as a last resort)</li>
     </ul>
   </li>
+  <li>Try to reconnect to other nodes to recover from temporary netsplit</li>
+  <li>Nodes that have been disconnected for a while are purged (to handle longer term failures)</li>
 </ul>
 
 </section>

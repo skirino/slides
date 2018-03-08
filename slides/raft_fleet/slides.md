@@ -268,8 +268,8 @@ end
 - Run periodic checks of consensus members
     - add missing member, remove extra member, replace leader with member in the desired node
     - to avoid contention, each node manages consensus groups whose leaders are expected to be on that node
-    - node with too many failing members will be purged
-    - consensus group with majority failing is removed (as a last resort)
+- Try to reconnect to other nodes to recover from temporary netsplit
+- Nodes that have been disconnected for a while are purged (to handle longer term failures)
 
 ---
 
