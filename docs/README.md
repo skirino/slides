@@ -5,6 +5,7 @@
 >>>
 
 - [CAP定理のはなし](https://skirino.github.io/slides/CAP_theorem.html)
+- [Advice for New Graduates](https://skirino.github.io/slides/advice_for_new_graduates.html)
 - [Introduction to Croma](https://skirino.github.io/slides/croma.html)
 - [わかった気になるElixir macro](https://skirino.github.io/slides/elixir_macro.html)
 - [Stuff goes bad: Erlang in Angerの紹介](https://skirino.github.io/slides/erlang_stuff_goes_bad.html)

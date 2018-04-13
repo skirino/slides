@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
+    <meta charset="utf-8">
+
+<title>Slides</title>
+
+<meta name="description" content="">
+<meta name="author" content="">
+<meta name="generator" content="reveal-ck 3.8.0">
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h2>Advice for New Graduates</h2>
+
+<p>桐野 俊輔 (<a href="https://github.com/skirino">skirino</a>) @ <a href="http://jp.access-company.com/">ACCESS</a></p>
+
+<p>2018/04/13</p>
+
+</section>
+<section>
+<section>
+
+<h3>前置き: これは何?</h3>
+
+<ul>
+  <li>社内で新人向けに話す機会をもらった</li>
+  <li>いま新人エンジニアに伝えたいこと
+    <ul>
+      <li>どんな心づもりで仕事をして欲しいか</li>
+      <li>自分が1年目に聞きたかった(気がする)こと</li>
+    </ul>
+  </li>
+  <li>ここでは当たり前のことしか言わない
+    <ul>
+      <li>が、当たり前のことができている人のいかに少ないことか(自戒も含む)</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>前置き: この話の前提</h3>
+
+<ul>
+  <li>ACCESSはソフトウェアで利益をあげる会社</li>
+  <li>audienceはソフトウェアエンジニア</li>
+  <li>project単位の日々の作業について主に議論する。”そもそもこのprojectやるべき?”といったレイヤーの話はしない</li>
+  <li>プログラミング言語非依存</li>
+</ul>
+
+</section>
+<section>
+
+<h3>前置き: 自己紹介</h3>
+
+<ul>
+  <li>2011年入社、8年目</li>
+  <li>学生時代は物理やってた</li>
+  <li>サーバサイドの人
+    <ul>
+      <li>Rails =&gt; Scala =&gt; Elixir</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>ソフトウェアの性質</h3>
+
+</section>
+<section>
+
+<h3>ソフトウェアで儲ける</h3>
+
+<ul>
+  <li>プロダクトの価値を高める
+    <ul>
+      <li>(外部品質。いろいろあるがこちらはスキップ)</li>
+    </ul>
+  </li>
+  <li>プロダクトの開発・運用コストを下げる
+    <ul>
+      <li>(内部品質。今回の主題はこちら)</li>
+      <li>要するにmaintainableにする</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Maintainability</h3>
+
+<ul>
+  <li>対象ユーザ、ユーザのニーズ、動作環境、言語バージョン、ライブラリ、…<br>
+すべて変わっていく</li>
+  <li>ソフトウェアを変更しないことには食べていけない</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Maintainability</h3>
+
+<ul>
+  <li>変更しにくいがバグがないソフトウェア</li>
+  <li>
+    <p>変更しやすいがバグがあるソフトウェア</p>
+  </li>
+  <li>(バグの深刻さにも依るが)変更される前提ではおそらく後者のほうが望ましい
+    <ul>
+      <li>バグを修正するのも簡単なはず</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Maintainability</h3>
+
+<ul>
+  <li>変更しやすい
+    <ul>
+      <li>修正箇所が明確で局所的</li>
+      <li>修正の影響が予測しやすい</li>
+    </ul>
+  </li>
+  <li>変更しにくい
+    <ul>
+      <li>修正箇所がわからない</li>
+      <li>修正箇所があちこちに散らばっている</li>
+      <li>修正によって何が起きるかわからない</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>良いコードのために</h3>
+
+</section>
+<section>
+
+<h3>良いコードのために</h3>
+
+<ul>
+  <li>ここはもっと良くなるはず、を認識できるようになろう(code smell)</li>
+  <li>コードについての話をしよう
+    <ul>
+      <li>こういうコードは良い/悪い、こんな書き方がある、等々</li>
+      <li>特にレビューの場を活用しよう</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>良いコードのために</h3>
+
+<ul>
+  <li>maintainabilityの敵は
+    <ul>
+      <li>重複</li>
+      <li>分岐</li>
+      <li>悪い命名</li>
+    </ul>
+  </li>
+  <li>(マルチスレッド時は話がもっともっとややこしいが、いったん置いておく)</li>
+</ul>
+
+</section>
+<section>
+
+<h3>重複</h3>
+
+<ul>
+  <li>“uncontrolled duplication of information is evil”
+    <ul>
+      <li>(義務教育で教えるべき!)</li>
+    </ul>
+  </li>
+  <li>“information”にはコードのみならずデータもあてはまる
+    <ul>
+      <li>DB正規化とか</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>重複</h3>
+
+<ul>
+  <li>重複をなくすべく死力を尽くそう</li>
+  <li>各プログラミング言語・ライブラリはそのための方策を用意している</li>
+</ul>
+
+</section>
+<section>
+
+<h3>分岐をどう扱うか</h3>
+
+<ul>
+  <li>if文などで分岐を書くのは簡単だが、多重になると把握しきれなくなる
+    <ul>
+      <li>大事でない分岐を別の関数などに追いやってレイヤーを分けよう</li>
+    </ul>
+  </li>
+  <li>分岐するコードと逐次実行するコードをなるべく住み分けしよう
+    <ul>
+      <li>逐次コードによって大事な分岐を埋もれさせないように</li>
+    </ul>
+  </li>
+  <li>分岐をエレガントに扱うための言語・ライブラリの機能を活用しよう
+    <ul>
+      <li>パターンマッチ、仮想関数、型クラス、等々</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>命名(識別子など)について</h3>
+
+<ul>
+  <li>悪い名前は事実と異なる認識をもたせてヒドいことになる元凶</li>
+  <li>
+    <p>良い名前は概念を端的に言い表すことで脳の負担を減らす</p>
+  </li>
+  <li>雲泥の差が生じうる。難しいが、時間をかける価値がある
+    <ul>
+      <li>類語辞典などを活用しつつ、複数の案を出して検討しよう</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>良いコードのために</h3>
+
+<ul>
+  <li>目指すべきは”easy”ではなく”simple”
+    <ul>
+      <li><a href="https://github.com/matthiasn/talk-transcripts/blob/master/Hickey_Rich/SimpleMadeEasy.md">simple made easy by Rich Hickey</a></li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>エンジニア個人レベルの話</h3>
+
+</section>
+<section>
+
+<h3>個々のエンジニアの生産性</h3>
+
+<ul>
+  <li>技術力(すぐには変化しない)
+    <ul>
+      <li>状況に応じた”正しい”解決策を採れるかどうか</li>
+    </ul>
+  </li>
+  <li>モチベーション(コロコロ変わる)
+    <ul>
+      <li>単位時間あたりにactionを起こす数</li>
+      <li>技術力の上昇度合い</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3><a href="http://blog.livedoor.jp/lalha/archives/50065532.html">プログラマー風林火山</a></h3>
+
+<ul>
+  <li>「風」: 迅速な設計/実装によってチームを加速させる風のエンジニア。<br>
+風のエンジニアがいない開発チームでは、他に先駆けて新製品やサービスをリリースすることが困難になる。</li>
+  <li>「林」: 突発的なトラブルが発生しても冷静に対処し、チームに乱れぬペースを提供する林のエンジニア。林のエンジニアがいない開発チームはトラブル発生時に何をすべきかの正確な判断を行えず、混乱に陥りやすい。</li>
+</ul>
+
+</section>
+<section>
+
+<h3><a href="http://blog.livedoor.jp/lalha/archives/50065532.html">プログラマー風林火山</a></h3>
+
+<ul>
+  <li>「火」: 新しい技術/方法/ツールの積極的な導入によってチームやその成果物の競争力を高める火のエンジニア。火のエンジニアがいない開発チームは同じやり方を繰り返すことはできるが、進歩する機会が少ない。</li>
+  <li>「山」: 厳密なエラーチェックと堅牢なプログラミングによって成果物の安定性を高める山のエンジニア。山のエンジニアがいない開発チームは常に品質の低さからくる不安にさいなまれる。</li>
+</ul>
+
+</section>
+<section>
+
+<h3><a href="http://blog.livedoor.jp/lalha/archives/50065532.html">プログラマー風林火山</a></h3>
+
+<ul>
+  <li>いろいろな貢献のしかたがある</li>
+  <li>言語・ライブラリなどに依らない”能力”</li>
+  <li>各エンジニアがすべての要素をある程度備えている必要がある</li>
+  <li>その上でチームに何か1つの要素をプラスすることを目指すべし</li>
+</ul>
+
+</section>
+<section>
+
+<h3><a href="http://blog.livedoor.jp/lalha/archives/50065532.html">プログラマー風林火山</a></h3>
+
+<ul>
+  <li>「風」と「火」タイプは目立ちやすい
+    <ul>
+      <li>が、手戻りなども多くなりがち
+        <ul>
+          <li>「火」がいっぱいいても仕方なかったり</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>「林」と「山」タイプは目立ちにくい
+    <ul>
+      <li>一方で確実な戦力になる場合が多い</li>
+      <li>新人エンジニアに意識してほしいのはむしろこちら</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>チームでの開発について</h3>
+
+</section>
+<section>
+
+<h3>ソフトウェア開発はチームスポーツである</h3>
+
+<ul>
+  <li>
+<a href="https://www.amazon.co.jp/Team-Geek-%E2%80%95Google%E3%81%AE%E3%82%AE%E3%83%BC%E3%82%AF%E3%81%9F%E3%81%A1%E3%81%AF%E3%81%84%E3%81%8B%E3%81%AB%E3%81%97%E3%81%A6%E3%83%81%E3%83%BC%E3%83%A0%E3%82%92%E4%BD%9C%E3%82%8B%E3%81%AE%E3%81%8B-Brian-Fitzpatrick/dp/4873116309">Team Geek</a>より</li>
+  <li>いいメタファーだと思うので紹介</li>
+  <li>(陸上のリレーとかではなく、球技(サッカー、野球、etc.)を思い浮かべよう。Team Geekのイラストはアメフト)</li>
+</ul>
+
+</section>
+<section>
+
+<h3>チームスポーツとの共通点</h3>
+
+<ul>
+  <li>メンバーの長所を活かし合ってチームとして機能</li>
+  <li>スーパースターがいるチームが勝つとは限らない</li>
+  <li>勝つための戦略は単純にはわからない
+    <ul>
+      <li>常にうまくいく戦略は(おそらく)ない</li>
+    </ul>
+  </li>
+  <li>=&gt; チームを機能させることに注力しよう</li>
+</ul>
+
+</section>
+<section>
+
+<h3>参考: チームスポーツとの相違点</h3>
+
+<ul>
+  <li>1チームのメンバー数に上限はない
+    <ul>
+      <li>“無闇な増員”という間違いが多発しがち
+        <ul>
+          <li>実際には、長期的視点に基づかない増員はたいてい悪手</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>対等な相手との争いではない(ことが多い)。明示的な”敵”はいない</li>
+</ul>
+
+</section>
+<section>
+
+<h3>HRT(再度<a href="https://www.amazon.co.jp/Team-Geek-%E2%80%95Google%E3%81%AE%E3%82%AE%E3%83%BC%E3%82%AF%E3%81%9F%E3%81%A1%E3%81%AF%E3%81%84%E3%81%8B%E3%81%AB%E3%81%97%E3%81%A6%E3%83%81%E3%83%BC%E3%83%A0%E3%82%92%E4%BD%9C%E3%82%8B%E3%81%AE%E3%81%8B-Brian-Fitzpatrick/dp/4873116309">Team Geek</a>より)</h3>
+
+<ul>
+  <li>すべての問題は以下3つが十分でないため
+    <ul>
+      <li>Humility(謙虚)</li>
+      <li>Respect(尊敬)</li>
+      <li>Trust(信頼)</li>
+    </ul>
+  </li>
+  <li>Team Geek読もう</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>新人へのメッセージ</h3>
+
+</section>
+<section>
+
+<h3>自分の成長に責任を持つ</h3>
+
+<ul>
+  <li>会社から与えられた「状況」で何を学ぶか</li>
+  <li>会社の外で自分用のカリキュラムを作って進めていけるか</li>
+  <li>また、なるべく”廃れないこと”を選んで学ぼう</li>
+  <li>3年くらい経つとすごい差に</li>
+</ul>
+
+</section>
+<section>
+
+<h3>こだわりを持つ</h3>
+
+<ul>
+  <li>自分の携わるプロダクトに誇りを持とう
+    <ul>
+      <li>持てないようなら、誇りを持てるようにするには何を変えればいいか考えよう</li>
+    </ul>
+  </li>
+  <li>「ここはこうあるべき」を常に考えよう
+    <ul>
+      <li>現状ベースではなく理想像を考えよう</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>自発的に動く</h3>
+
+<ul>
+  <li>状況把握を欠かず自分からアクションを起こそう
+    <ul>
+      <li>他メンバー・他チームの作業に目を光らせよう(GitHub通知など)</li>
+      <li>できそうなタスクを積極的にこなしていこう</li>
+    </ul>
+  </li>
+  <li>逆に、周りに自発的に動いてもらうため情報を発信しよう</li>
+  <li>(他人のアクション依存の人は、社内トータルの仕事量を増やしている)</li>
+</ul>
+
+</section>
+<section>
+
+<h3>メタ認知</h3>
+
+<ul>
+  <li>人は「自分」を特別扱いしがちであることを認識しておこう
+    <ul>
+      <li>たとえば「自分が書いたコードは良く/悪く見える」とか</li>
+    </ul>
+  </li>
+  <li>ニュートラルな判断を下せるようになろう</li>
+</ul>
+
+</section>
+<section>
+
+<h3>思考停止しない</h3>
+
+<ul>
+  <li>思考停止していいのは「思考停止は悪」という公理を受け入れるときだけ</li>
+  <li>常に頭を使おう
+    <ul>
+      <li>何が”正しい”かを状況に応じて批判的にチェックしよう</li>
+      <li>代替案をメリット・デメリットと合わせて列挙しよう</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>思考停止しない</h3>
+
+<ul>
+  <li>「XXさんが言ったから」は”正しい”ことの理由にはならない
+    <ul>
+      <li>特に「お客さんが言ったから」がアブナイ
+        <ul>
+          <li>取りうる選択肢をちゃんと検討する</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>“期待に応える” != “言われたとおりにする”
+    <ul>
+      <li><a href="https://en.wikiquote.org/wiki/Talk:Henry_Ford#%22If_I%E2%80%99d_asked_people_what_they_wanted,_they_would_have_asked_for_a_better_horse%22">“If I’d asked people what they wanted, they would have asked for a better horse” by Henry Ford</a></li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'default',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+
+  
+
+  var configOptions = {"controls":true,"progress":true,"history":true,"center":true}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>
