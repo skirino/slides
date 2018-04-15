@@ -3,10 +3,10 @@
   <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
     <meta charset="utf-8">
 
-<title>Slides</title>
+<title>Advice for New Graduates</title>
 
 <meta name="description" content="">
-<meta name="author" content="">
+<meta name="author" content="Shunsuke Kirino">
 <meta name="generator" content="reveal-ck 3.8.0">
 
 
@@ -17,7 +17,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
 
 <link rel="stylesheet" href="css/reveal.css">
-<link rel="stylesheet" href="css/theme/black.css" id="theme">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
 
 <!-- Code syntax highlighting -->
 <link rel="stylesheet" href="lib/css/zenburn.css">
@@ -59,10 +59,9 @@
 <h3>前置き: これは何?</h3>
 
 <ul>
-  <li>社内で新人向けに話す機会をもらった</li>
-  <li>いま新人エンジニアに伝えたいこと
+  <li>社内で新人向けに話す機会をもらった
     <ul>
-      <li>どんな心づもりで仕事をして欲しいか</li>
+      <li>どんな心づもりで仕事をして欲しいか、考え方の指針</li>
       <li>自分が1年目に聞きたかった(気がする)こと</li>
     </ul>
   </li>
@@ -106,7 +105,7 @@
 <section>
 <section>
 
-<h3>ソフトウェアの性質</h3>
+<h3>ソフトウェアのmaintainability</h3>
 
 </section>
 <section>
@@ -130,7 +129,7 @@
 </section>
 <section>
 
-<h3>Maintainability</h3>
+<h3>変更について</h3>
 
 <ul>
   <li>対象ユーザ、ユーザのニーズ、動作環境、言語バージョン、ライブラリ、…<br>
@@ -439,7 +438,7 @@
 <h3>HRT(再度<a href="https://www.amazon.co.jp/Team-Geek-%E2%80%95Google%E3%81%AE%E3%82%AE%E3%83%BC%E3%82%AF%E3%81%9F%E3%81%A1%E3%81%AF%E3%81%84%E3%81%8B%E3%81%AB%E3%81%97%E3%81%A6%E3%83%81%E3%83%BC%E3%83%A0%E3%82%92%E4%BD%9C%E3%82%8B%E3%81%AE%E3%81%8B-Brian-Fitzpatrick/dp/4873116309">Team Geek</a>より)</h3>
 
 <ul>
-  <li>すべての問題は以下3つが十分でないため
+  <li>「あらゆる人間関係の衝突はHRTの欠如によるもの」
     <ul>
       <li>Humility(謙虚)</li>
       <li>Respect(尊敬)</li>
@@ -572,7 +571,7 @@
     }
   }
   var baseOptions = {
-    transition: 'default',
+    transition: 'page',
 
     dependencies: [
       { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
@@ -586,7 +585,7 @@
 
   
 
-  var configOptions = {"controls":true,"progress":true,"history":true,"center":true}
+  var configOptions = {"dependencies":[{"src":"plugin/math/math.js","async":true}],"math":{"mathjax":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"}}
   var initializeOptions = {};
   extend(initializeOptions, baseOptions);
   extend(initializeOptions, configOptions);
