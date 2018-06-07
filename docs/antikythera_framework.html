@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="en">
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
+    <meta charset="utf-8">
+
+<title>Antikythera Framework</title>
+
+<meta name="description" content="">
+<meta name="author" content="Shunsuke Kirino">
+<meta name="generator" content="reveal-ck 3.8.0">
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h3>Antikythera Framework</h3>
+
+<p>桐野 俊輔 (<a href="https://github.com/skirino">skirino</a>) @ <a href="http://jp.access-company.com/">ACCESS</a></p>
+
+<p><a href="https://elixir-fest.jp/">Erlang &amp; Elixir Fest 2018</a> (2018/6/16)</p>
+
+</section>
+<section>
+<section>
+
+<h3>Agenda</h3>
+
+<ol>
+  <li>What is Antikythera Framework?
+    <ul>
+      <li>brief history, our motivations</li>
+    </ul>
+  </li>
+  <li>Core features and benefits
+    <ul>
+      <li>comparisons with other frameworks</li>
+    </ul>
+  </li>
+  <li>Deep-dive into the internals
+    <ul>
+      <li>pros/cons of some design decisions</li>
+    </ul>
+  </li>
+</ol>
+
+</section>
+<section>
+
+<h3>About the speaker</h3>
+
+<ul>
+  <li>桐野 俊輔 (Shunsuke Kirino)</li>
+  <li>Ex-physicist</li>
+  <li>Server-side guy in <a href="http://jp.access-company.com/">ACCESS</a> since 2011</li>
+  <li>Developing antikythera core and operating antikythera clusters since 2015</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>1. What is Antikythera Framework?</h3>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>About the name</h3>
+
+<ul>
+  <li>The Antikythera mechanism
+    <ul>
+      <li>An ancient Greek analog computer</li>
+      <li>Discovered in 1902 near the coast of <a href="https://en.wikipedia.org/wiki/Antikythera">Antikythera island</a>
+</li>
+      <li>Kind of an “Out-Of-Place ARTifact”</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>The Antikythera mechanism</h3>
+
+<p><img src="images/AntikytheraMechanism.jpg" width="500px"></p>
+
+</section>
+<section>
+
+<h3>The Antikythera mechanism</h3>
+
+<ul>
+  <li>Used to predict astronomical positions and eclipses
+    <ul>
+      <li>for calendar and astrological purposes</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Gear scheme (hypothetical)</h3>
+
+<p><img src="images/AntikytheraMechanismGearScheme.png" width="500px"></p>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>So what’s Antikythera Framework?</h3>
+
+<ul>
+  <li>
+    <p>In a nutshell,</p>
+
+    <p>“Elixir Framework for in-house PaaS”</p>
+  </li>
+  <li>
+    <p>(Apache 2-licensed)</p>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>History: Our problems in 2015</h3>
+
+<ul>
+  <li>10s of running web services
+    <ol>
+      <li>developed using different languages</li>
+      <li>operated in different ways</li>
+      <li>involving significant infrastructure cost</li>
+    </ol>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>(1) Divergence in technology stacks</h3>
+
+<ul>
+  <li>Problems:
+    <ul>
+      <li>Little chance of code reuse</li>
+      <li>Increased cost for developer bootstrapping</li>
+    </ul>
+  </li>
+  <li>What we wanted:
+    <ul>
+      <li>One language for server-side development</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>(2) Divergence in operations</h3>
+
+<ul>
+  <li>Problems:
+    <ul>
+      <li>Lack of sharing of scripts/knowledge across teams</li>
+      <li>Teams had no time to automate their “toil”s</li>
+    </ul>
+  </li>
+  <li>What we wanted:
+    <ul>
+      <li>Standardized &amp; automated operations (deployment, etc.)</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>(3) Infrastructure cost</h3>
+
+<ul>
+  <li>Problems:
+    <ul>
+      <li>Extra cost for “buffer” and “redundancy”, too many idle CPUs</li>
+      <li>Many resources to monitor/manage</li>
+    </ul>
+  </li>
+  <li>What we wanted:
+    <ul>
+      <li>Single pool of computational resources that can be shared by all services</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Our approach</h3>
+
+<ul>
+  <li>An Elixir framework that hosts multiple web services in a single ErlangVM cluster</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Antikythera “gear”</h3>
+
+<ul>
+  <li>Hereafter we call each web service running within an antikythera cluster as a “gear”
+    <ul>
+      <li>Actually the name “antikythera” comes from this term</li>
+    </ul>
+  </li>
+  <li>Gear may depend on other gear(s)</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>2. Core features and benefits</h3>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Core features (1)</h3>
+
+<ul>
+  <li>As a platform for multiple services
+    <ul>
+      <li>Resource control and isolation
+        <ul>
+          <li>gear doesn’t disturb other gears</li>
+        </ul>
+      </li>
+      <li>Automated operations
+        <ul>
+          <li>deploy with hot code upgrades, etc.</li>
+        </ul>
+      </li>
+      <li>Built-in common functionalities
+        <ul>
+          <li>logging, metrics reporting, etc.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Core features (2)</h3>
+
+<ul>
+  <li>As a web framework
+    <ul>
+      <li>Domain-based request routing
+        <ul>
+          <li>determine which gear to handle</li>
+        </ul>
+      </li>
+      <li>Path-based request routing within a gear
+        <ul>
+          <li>determine which module/function to handle</li>
+        </ul>
+      </li>
+      <li>Features similar to e.g. <a href="http://phoenixframework.org/">phoenix</a>
+</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Core features (3)</h3>
+
+<ul>
+  <li>As an asynchronous job executor
+    <ul>
+      <li>Built-in distributed job queues</li>
+      <li>Running arbitrary Elixir code for each job</li>
+      <li>One-off and periodic (cron) job scheduling</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Benefits</h3>
+
+<ul>
+  <li>1 language to learn</li>
+  <li>Straightforward code reuse</li>
+  <li>No need to write scripts for common tasks</li>
+  <li>Reduced extra infrastructure cost</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Cost savings</h3>
+
+<ul>
+  <li>Antikythera cluster in ACCESS
+    <ul>
+      <li>running in AWS</li>
+      <li>~25 gears</li>
+      <li>only 3 c4.large instances</li>
+      <li>2 guys to operate</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Comparisons with <a href="http://phoenixframework.org/">phoenix</a>
+</h3>
+
+<ul>
+  <li>Both are Elixir-based frameworks</li>
+  <li>Phoenix has matured with large user base</li>
+  <li>Antikythera offers a novel execution model for multiple services</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Comparisons with micro-services architecture (1)</h3>
+
+<ul>
+  <li>Both advocate service-level code separations</li>
+  <li>Microservice enforces complete isolation; in antikythera it’s less strict</li>
+  <li>Antikythera reduces servers to manage, standardizes operations</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Comparisons with micro-services architecture (2)</h3>
+
+<ul>
+  <li>Antikythera uses computational resources more effectively
+    <ul>
+      <li>CPU/memory can be shared by all gears</li>
+    </ul>
+  </li>
+  <li>Gear-to-gear communications in antikythera involves less overhead</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>FAQ: What about DBs?</h3>
+
+<ul>
+  <li>Antikythera itself is DB-agnostic</li>
+  <li>You can use any DB with any lib as you like</li>
+  <li>Executor pool (explained later) provides a basis for rate limiting accesses to DB</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Amenities for gears</h3>
+
+<ul>
+  <li>Gear comes with the followings out-of-the-box
+    <ul>
+      <li>gear config</li>
+      <li>alerting</li>
+      <li>logging</li>
+      <li>metrics reporting</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Gear config</h3>
+
+<ul>
+  <li>Arbitrary map for each gear
+    <ul>
+      <li>Store secrets and dynamic configurations
+        <ul>
+          <li>such as API keys, connection strings, …</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Original data is stored in an encrypted JSON file</li>
+  <li>The data is cached in ETS for fast access</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Logging</h3>
+
+<ul>
+  <li>Each gear has its own logger process</li>
+  <li>The following logs are auto-generated
+    <ul>
+      <li>HTTP: request &amp; response</li>
+      <li>websocket: connect &amp; disconnect</li>
+      <li>async job: start &amp; end</li>
+      <li>error logs with stacktrace</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Alerting</h3>
+
+<ul>
+  <li>When an exception is raised (not caught) by gear code, antikythera sends an email to the gear developers (in addition to error logs)
+    <ul>
+      <li>Consecutive error alerts are batched</li>
+    </ul>
+  </li>
+  <li>Necessary to quickly find and fix bugs</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Metrics reporting</h3>
+
+<ul>
+  <li>Various metrics are auto-gathered and sent to <code>MetricsStorage</code>
+    <ul>
+      <li>HTTP response times (average, 95%, max)</li>
+      <li>async job execution times (average, 95%, max)</li>
+      <li>status of exec pool: running/total processes</li>
+      <li>ErlangVM-level metrics</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Metrics reporting</h3>
+
+<ul>
+  <li>Example: store metrics in elasticsearch and watch them via kibana dashboard:</li>
+</ul>
+
+<p><img src="images/gear_metrics_in_kibana.png" width="700px"></p>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>3. Deep-dive into the internals</h3>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Architecture</h3>
+
+<p><img src="images/AntikytheraArchitecture.png" width="700px"></p>
+
+</section>
+<section>
+
+<h3>HTTP request handling</h3>
+
+<ul>
+  <li>HTTP 1.1 server using <a href="https://github.com/ninenines/cowboy">cowboy 2</a>
+</li>
+  <li>Domain-based routing using cowboy’s router</li>
+  <li>Path-based routing by matching against macro-generated function clauses</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Gear-to-gear communications</h3>
+
+<ul>
+  <li>Service-level interactions (HTTP-like)
+    <ul>
+      <li>synchronous, headers and bodies, etc.</li>
+      <li>enables code sharing in HTTP- and g2g-handlers</li>
+    </ul>
+  </li>
+  <li>Elixir-level interactions
+    <ul>
+      <li>Direct function calls</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Clustering</h3>
+
+<ul>
+  <li>To maintain the cluster, each node periodically
+    <ul>
+      <li>polls the current list of nodes from e.g. infrastructure API</li>
+      <li>connects to any unconnected nodes</li>
+    </ul>
+  </li>
+  <li>Cluster-wide process registry using <a href="https://github.com/ostinelli/syn">syn</a>
+</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>EAL</h3>
+
+<ul>
+  <li>(Short for Environment Abstraction Layer)</li>
+  <li>Pluggable infra-dependent features using behaviours</li>
+  <li>Concrete implementations are specified by compile-time mix configurations
+    <ul>
+      <li>see <a href="https://github.com/access-company/antikythera/blob/master/eal/util/impl_chooser.ex"><code>AntikytheraEal.ImplChooser</code></a>
+</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>EAL</h3>
+
+<ul>
+  <li>Behaviours:
+    <ul>
+      <li><a href="https://hexdocs.pm/antikythera/AntikytheraEal.ClusterConfiguration.Behaviour.html"><code>ClusterConfiguration</code></a></li>
+      <li><a href="https://hexdocs.pm/antikythera/AntikytheraEal.AlertMailer.Behaviour.html"><code>AlertMailer</code></a></li>
+      <li><a href="https://hexdocs.pm/antikythera/AntikytheraEal.LogStorage.Behaviour.html"><code>LogStorage</code></a></li>
+      <li><a href="https://hexdocs.pm/antikythera/AntikytheraEal.MetricsStorage.Behaviour.html"><code>MetricsStorage</code></a></li>
+      <li><a href="https://hexdocs.pm/antikythera/AntikytheraEal.AssetStorage.Behaviour.html"><code>AssetStorage</code></a></li>
+    </ul>
+  </li>
+  <li>For AWS <a href="https://github.com/access-company/antikythera_aws"><code>antikythera_aws</code></a> is available</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Resource control</h3>
+
+<ul>
+  <li>Each Erlang process
+    <ul>
+      <li>has its own execution context and memory space</li>
+      <li>isolated from other processes</li>
+    </ul>
+  </li>
+  <li>Thus, “number of processes” can be used as 1st approximation of resource consumption</li>
+  <li>(That’s why we chose Elixir)</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Executor pool</h3>
+
+<ul>
+  <li>control resources in terms of processes</li>
+  <li>consists of 3 pools per type of tasks
+    <ul>
+      <li>web request handlers</li>
+      <li>websocket conections</li>
+      <li>async job runners</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Multi-tenant use cases</h3>
+
+<ul>
+  <li>Executor pool also supports multi-tenants
+    <ul>
+      <li>Making exec pool per tenant</li>
+      <li>Assigning exec pool when processing a task (e.g. an HTTP request)</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Other limits</h3>
+
+<ul>
+  <li>There are also upper limits on
+    <ul>
+      <li>size of heap memory per process</li>
+      <li>request/job execution times</li>
+      <li>rate of accesses to async job queues</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Isolation</h3>
+
+<ul>
+  <li>As gears run in the same ErlangVM, they are not completely isolated
+    <ul>
+      <li>Gear can e.g. call other gear’s code, get other gear’s secrets, etc.</li>
+    </ul>
+  </li>
+  <li>That’s why we call antikythera as “in-house PaaS”
+    <ul>
+      <li>Untrusted code shouldn’t be installed in antikythera clusters</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Dependency management</h3>
+
+<ul>
+  <li>All gears run in the same ErlangVM
+    <ul>
+      <li>They share the same libraries and configurations</li>
+    </ul>
+  </li>
+  <li>To unify management of deps/configs, one needs an “antikythera instance”</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Antikythera instance</h3>
+
+<ul>
+  <li>A mix project to manage deps/configs for a specific antikythera cluster</li>
+  <li>Antikythera instance must depend on antikythera</li>
+  <li>All gears in the cluster depend on the antikythera instance
+    <ul>
+      <li>by doing so gears share the same deps/configs</li>
+    </ul>
+  </li>
+  <li>To make this dependency structure work, antikythera’s mix settings are rather tricky…</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Deployment model</h3>
+
+<ul>
+  <li>Antikythera instance is packaged and deployed as an OTP release</li>
+  <li>Each gear is packaged and deployed as an OTP application
+    <ul>
+      <li>Gears are not included in the OTP release</li>
+    </ul>
+  </li>
+  <li>Antikythera polls new versions of instance/gears and self-updates them</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Async job queues</h3>
+
+<ul>
+  <li>Job queue per exec pool
+    <ul>
+      <li>distributed, fault tolerant data structure implemented using <a href="https://github.com/skirino/raft_fleet"><code>raft_fleet</code></a>
+</li>
+      <li>runs within the same cluster of ErlangVMs</li>
+    </ul>
+  </li>
+  <li>Using DB for queues is also possible
+    <ul>
+      <li>but we want to avoid excessive polling; we want push-based interactions</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Async job workers</h3>
+
+<ul>
+  <li>Reside in the same ErlangVM
+    <ul>
+      <li>don’t separate nodes by role, make all nodes homogeneous
+        <ul>
+          <li>simplest possible cluster management</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Elixir macro</h3>
+
+<ul>
+  <li>Used for e.g.
+    <ul>
+      <li>filling out mix settings and configs</li>
+      <li>generating common code for gears</li>
+      <li>routing DSL</li>
+      <li>…</li>
+    </ul>
+  </li>
+  <li>Plays a vital role in antikythera</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Static analysis</h3>
+
+<ul>
+  <li>Introduced as a <a href="https://hexdocs.pm/antikythera/Mix.Tasks.Compile.GearStaticAnalysis.html">mix compiler</a>
+    <ul>
+      <li>check conformance to some of the <a href="https://hexdocs.pm/antikythera/must_nots.html">rules</a>
+        <ul>
+          <li>module naming, prohibited functions, etc.</li>
+        </ul>
+      </li>
+      <li>problematic code in gear results in a compile error</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Summary</h3>
+
+<ul>
+  <li>Antikythera Framework provides higher level abstractions for your web services
+    <ul>
+      <li>Try it yourself!</li>
+    </ul>
+  </li>
+  <li>Let’s unleash the full potential of Erlang and Elixir!</li>
+</ul>
+
+</section>
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'page',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+
+  
+
+  var configOptions = {"dependencies":[{"src":"plugin/math/math.js","async":true}],"math":{"mathjax":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"}}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>
