@@ -176,7 +176,7 @@
 
 - Antikythera cluster in ACCESS
     - running in AWS
-    - ~25 gears
+    - ~25 gears (would be ~50 instances)
     - only 3 c4.large instances
     - 2 guys to operate
 
@@ -358,7 +358,7 @@
 
 ### Multi-tenant use cases
 
-- Executor pool also supports multi-tenants
+- Executor pool also supports multi-tenant gears
     - Making exec pool per tenant
     - Assigning exec pool when processing a task (e.g. an HTTP request)
 

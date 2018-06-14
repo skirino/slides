@@ -360,7 +360,7 @@
   <li>Antikythera cluster in ACCESS
     <ul>
       <li>running in AWS</li>
-      <li>~25 gears</li>
+      <li>~25 gears (would be ~50 instances)</li>
       <li>only 3 c4.large instances</li>
       <li>2 guys to operate</li>
     </ul>
@@ -660,7 +660,7 @@
 <h3>Multi-tenant use cases</h3>
 
 <ul>
-  <li>Executor pool also supports multi-tenants
+  <li>Executor pool also supports multi-tenant gears
     <ul>
       <li>Making exec pool per tenant</li>
       <li>Assigning exec pool when processing a task (e.g. an HTTP request)</li>
@@ -876,7 +876,7 @@
 
   
 
-  var configOptions = {"dependencies":[{"src":"plugin/math/math.js","async":true}],"math":{"mathjax":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"}}
+  var configOptions = {"controls":true,"slideNumber":true,"history":true,"dependencies":[{"src":"plugin/math/math.js","async":true}],"math":{"mathjax":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"}}
   var initializeOptions = {};
   extend(initializeOptions, baseOptions);
   extend(initializeOptions, configOptions);
