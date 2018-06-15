@@ -130,6 +130,20 @@
 ***
 ***
 
+### Basic idea
+
+- Load all beam files in the same ErlangVM
+- Control resources by Elixir code
+
+---
+
+### Architecture
+
+<img src="images/AntikytheraArchitecture.png" width="800px" />
+
+***
+***
+
 ### Core features (1)
 
 - As a platform for multiple services
@@ -166,9 +180,10 @@
 ### Benefits
 
 - 1 language to learn
-- Straightforward code reuse
-- No need to write scripts for common tasks
-- Reduced extra infrastructure cost
+    - Straightforward code reuse
+- Centralized cluster management
+    - Gear devs are freed from server/dependency management
+- Reduced infrastructure cost
 
 ---
 
@@ -176,7 +191,7 @@
 
 - Antikythera cluster in ACCESS
     - running in AWS
-    - ~25 gears (would be ~50 instances)
+    - ~25 gears (would require ~50 instances)
     - only 3 c4.large instances
     - 2 guys to operate
 
@@ -191,19 +206,19 @@
 
 ---
 
-### Comparisons with micro-services architecture (1)
+### Comparisons with micro-services (1)
 
 - Both advocate service-level code separations
-- Microservice enforces complete isolation; in antikythera it's less strict
 - Antikythera reduces servers to manage, standardizes operations
+- Gear-to-gear communications in antikythera involves less overhead
 
 ---
 
-### Comparisons with micro-services architecture (2)
+### Comparisons with micro-services (2)
 
+- Microservices enforce complete isolation; in antikythera it's less strict
 - Antikythera uses computational resources more effectively
     - CPU/memory can be shared by all gears
-- Gear-to-gear communications in antikythera involves less overhead
 
 ***
 ***
@@ -212,7 +227,7 @@
 
 - Antikythera itself is DB-agnostic
 - You can use any DB with any lib as you like
-- Executor pool (explained later) provides a basis for rate limiting accesses to DB
+- Executor pools (explained later) provide basis for rate limiting accesses to DB
 
 ***
 ***
@@ -270,7 +285,7 @@
 
 - Example: store metrics in elasticsearch and watch them via kibana dashboard:
 
-<img src="images/gear_metrics_in_kibana.png" width="700px" />
+<img src="images/gear_metrics_in_kibana.png" width="800px" />
 
 ***
 ***
@@ -282,7 +297,7 @@
 
 ### Architecture
 
-<img src="images/AntikytheraArchitecture.png" width="700px" />
+<img src="images/AntikytheraArchitecture.png" width="800px" />
 
 ---
 
@@ -338,9 +353,8 @@
 
 ### Resource control
 
-- Each Erlang process
-    - has its own execution context and memory space
-    - isolated from other processes
+- Erlang process:
+    - its own execution context and memory space, isolated from other processes
 - Thus, "number of processes" can be used as 1st approximation of resource consumption
 - (That's why we chose Elixir)
 
@@ -348,10 +362,10 @@
 
 ### Executor pool
 
-- control resources in terms of processes
-- consists of 3 pools per type of tasks
+- Control resources in terms of processes
+- Consists of 3 pools per type of tasks
     - web request handlers
-    - websocket conections
+    - websocket connections
     - async job runners
 
 ---
@@ -377,7 +391,7 @@
 
 - As gears run in the same ErlangVM, they are not completely isolated
     - Gear can e.g. call other gear's code, get other gear's secrets, etc.
-- That's why we call antikythera as "in-house PaaS"
+- That's why it's for "in-house PaaS"
     - Untrusted code shouldn't be installed in antikythera clusters
 
 ***
@@ -394,10 +408,9 @@
 ### Antikythera instance
 
 - A mix project to manage deps/configs for a specific antikythera cluster
-- Antikythera instance must depend on antikythera
+    - directly depends on antikythera
 - All gears in the cluster depend on the antikythera instance
     - by doing so gears share the same deps/configs
-- To make this dependency structure work, antikythera's mix settings are rather tricky...
 
 ---
 
@@ -436,7 +449,6 @@
     - filling out mix settings and configs
     - generating common code for gears
     - routing DSL
-    - ...
 - Plays a vital role in antikythera
 
 ---
@@ -444,7 +456,7 @@
 ### Static analysis
 
 - Introduced as a [mix compiler](https://hexdocs.pm/antikythera/Mix.Tasks.Compile.GearStaticAnalysis.html)
-    - check conformance to some of the [rules](https://hexdocs.pm/antikythera/must_nots.html)
+    - check conformance to some of the [gear coding rules](https://hexdocs.pm/antikythera/must_nots.html)
         - module naming, prohibited functions, etc.
     - problematic code in gear results in a compile error
 

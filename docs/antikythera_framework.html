@@ -273,6 +273,26 @@
 <section>
 <section>
 
+<h3>Basic idea</h3>
+
+<ul>
+  <li>Load all beam files in the same ErlangVM</li>
+  <li>Control resources by Elixir code</li>
+</ul>
+
+</section>
+<section>
+
+<h3>Architecture</h3>
+
+<p><img src="images/AntikytheraArchitecture.png" width="800px"></p>
+
+</section>
+</section>
+
+<section>
+<section>
+
 <h3>Core features (1)</h3>
 
 <ul>
@@ -345,10 +365,17 @@
 <h3>Benefits</h3>
 
 <ul>
-  <li>1 language to learn</li>
-  <li>Straightforward code reuse</li>
-  <li>No need to write scripts for common tasks</li>
-  <li>Reduced extra infrastructure cost</li>
+  <li>1 language to learn
+    <ul>
+      <li>Straightforward code reuse</li>
+    </ul>
+  </li>
+  <li>Centralized cluster management
+    <ul>
+      <li>Gear devs are freed from server/dependency management</li>
+    </ul>
+  </li>
+  <li>Reduced infrastructure cost</li>
 </ul>
 
 </section>
@@ -360,7 +387,7 @@
   <li>Antikythera cluster in ACCESS
     <ul>
       <li>running in AWS</li>
-      <li>~25 gears (would be ~50 instances)</li>
+      <li>~25 gears (would require ~50 instances)</li>
       <li>only 3 c4.large instances</li>
       <li>2 guys to operate</li>
     </ul>
@@ -385,26 +412,26 @@
 </section>
 <section>
 
-<h3>Comparisons with micro-services architecture (1)</h3>
+<h3>Comparisons with micro-services (1)</h3>
 
 <ul>
   <li>Both advocate service-level code separations</li>
-  <li>Microservice enforces complete isolation; in antikythera it’s less strict</li>
   <li>Antikythera reduces servers to manage, standardizes operations</li>
+  <li>Gear-to-gear communications in antikythera involves less overhead</li>
 </ul>
 
 </section>
 <section>
 
-<h3>Comparisons with micro-services architecture (2)</h3>
+<h3>Comparisons with micro-services (2)</h3>
 
 <ul>
+  <li>Microservices enforce complete isolation; in antikythera it’s less strict</li>
   <li>Antikythera uses computational resources more effectively
     <ul>
       <li>CPU/memory can be shared by all gears</li>
     </ul>
   </li>
-  <li>Gear-to-gear communications in antikythera involves less overhead</li>
 </ul>
 
 </section>
@@ -418,7 +445,7 @@
 <ul>
   <li>Antikythera itself is DB-agnostic</li>
   <li>You can use any DB with any lib as you like</li>
-  <li>Executor pool (explained later) provides a basis for rate limiting accesses to DB</li>
+  <li>Executor pools (explained later) provide basis for rate limiting accesses to DB</li>
 </ul>
 
 </section>
@@ -515,7 +542,7 @@
   <li>Example: store metrics in elasticsearch and watch them via kibana dashboard:</li>
 </ul>
 
-<p><img src="images/gear_metrics_in_kibana.png" width="700px"></p>
+<p><img src="images/gear_metrics_in_kibana.png" width="800px"></p>
 
 </section>
 </section>
@@ -533,7 +560,7 @@
 
 <h3>Architecture</h3>
 
-<p><img src="images/AntikytheraArchitecture.png" width="700px"></p>
+<p><img src="images/AntikytheraArchitecture.png" width="800px"></p>
 
 </section>
 <section>
@@ -628,10 +655,9 @@
 <h3>Resource control</h3>
 
 <ul>
-  <li>Each Erlang process
+  <li>Erlang process:
     <ul>
-      <li>has its own execution context and memory space</li>
-      <li>isolated from other processes</li>
+      <li>its own execution context and memory space, isolated from other processes</li>
     </ul>
   </li>
   <li>Thus, “number of processes” can be used as 1st approximation of resource consumption</li>
@@ -644,11 +670,11 @@
 <h3>Executor pool</h3>
 
 <ul>
-  <li>control resources in terms of processes</li>
-  <li>consists of 3 pools per type of tasks
+  <li>Control resources in terms of processes</li>
+  <li>Consists of 3 pools per type of tasks
     <ul>
       <li>web request handlers</li>
-      <li>websocket conections</li>
+      <li>websocket connections</li>
       <li>async job runners</li>
     </ul>
   </li>
@@ -694,7 +720,7 @@
       <li>Gear can e.g. call other gear’s code, get other gear’s secrets, etc.</li>
     </ul>
   </li>
-  <li>That’s why we call antikythera as “in-house PaaS”
+  <li>That’s why it’s for “in-house PaaS”
     <ul>
       <li>Untrusted code shouldn’t be installed in antikythera clusters</li>
     </ul>
@@ -724,14 +750,16 @@
 <h3>Antikythera instance</h3>
 
 <ul>
-  <li>A mix project to manage deps/configs for a specific antikythera cluster</li>
-  <li>Antikythera instance must depend on antikythera</li>
+  <li>A mix project to manage deps/configs for a specific antikythera cluster
+    <ul>
+      <li>directly depends on antikythera</li>
+    </ul>
+  </li>
   <li>All gears in the cluster depend on the antikythera instance
     <ul>
       <li>by doing so gears share the same deps/configs</li>
     </ul>
   </li>
-  <li>To make this dependency structure work, antikythera’s mix settings are rather tricky…</li>
 </ul>
 
 </section>
@@ -803,7 +831,6 @@
       <li>filling out mix settings and configs</li>
       <li>generating common code for gears</li>
       <li>routing DSL</li>
-      <li>…</li>
     </ul>
   </li>
   <li>Plays a vital role in antikythera</li>
@@ -817,7 +844,7 @@
 <ul>
   <li>Introduced as a <a href="https://hexdocs.pm/antikythera/Mix.Tasks.Compile.GearStaticAnalysis.html">mix compiler</a>
     <ul>
-      <li>check conformance to some of the <a href="https://hexdocs.pm/antikythera/must_nots.html">rules</a>
+      <li>check conformance to some of the <a href="https://hexdocs.pm/antikythera/must_nots.html">gear coding rules</a>
         <ul>
           <li>module naming, prohibited functions, etc.</li>
         </ul>
