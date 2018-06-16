@@ -189,11 +189,20 @@
 
 ### Cost savings
 
-- Antikythera cluster in ACCESS
+- Antikythera prod cluster in ACCESS
     - running in AWS
     - ~25 gears (would require ~50 instances)
     - only 3 c4.large instances
     - 2 guys to operate
+
+---
+
+### Additional benefits
+
+- Developers can freely deploy their own gears to our dev cluster
+    - start TLS-enabled web service in minutes
+    - no operation on their side
+    - good for experimentation/prototyping
 
 ***
 ***
