@@ -1,4 +1,6 @@
-### Antikythera Framework
+
+
+<img src="images/AntikytheraFrameworkLogoHorizontal.png" width="500px" style="border-style:none;" />
 
 桐野 俊輔 ([skirino](https://github.com/skirino)) @ [ACCESS](http://jp.access-company.com/)
 
@@ -43,7 +45,7 @@
 
 ### The Antikythera mechanism
 
-<img src="images/AntikytheraMechanism.jpg" width="500px" />
+<img src="images/AntikytheraMechanism.jpg" width="550px" />
 
 ---
 
@@ -56,7 +58,7 @@
 
 ### Gear scheme (hypothetical)
 
-<img src="images/AntikytheraMechanismGearScheme.png" width="500px" />
+<img src="images/AntikytheraMechanismGearScheme.png" width="550px" />
 
 ***
 ***
