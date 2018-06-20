@@ -3,6 +3,9 @@ transition: "page"
 author:     "Shunsuke Kirino"
 title:      "Advice for New Graduates"
 revealjs_config:
+  controls: true
+  slideNumber: true
+  history: true
   dependencies:
     - src:   "plugin/math/math.js"
       async: true
