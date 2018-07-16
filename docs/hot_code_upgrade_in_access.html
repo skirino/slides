@@ -369,13 +369,13 @@ end
 </section>
 <section>
 
-<h3>solomonについて</h3>
+<h3>antikytheraについて</h3>
 
 <ul>
-  <li>社内PaaS</li>
+  <li>OSSのPaaS framework</li>
   <li>AWSで稼働中</li>
   <li>社内の各チームがそれぞれOTP applicationを作る</li>
-  <li>solomon coreチームがまとめて運用</li>
+  <li>antikythera coreチームがまとめて運用</li>
   <li>(いろいろしゃべりたいが、時間の都合で略)</li>
 </ul>
 
@@ -385,7 +385,7 @@ end
 <h3>自動デプロイ方針</h3>
 
 <ul>
-  <li>solomon本体の更新はreleaseを作って<a href="http://erlang.org/doc/man/release_handler.html#install_release-1"><code>:release_handler.install_release/2</code></a>で取り込む(hot code upgrade)</li>
+  <li>antikythera本体の更新はreleaseを作って<a href="http://erlang.org/doc/man/release_handler.html#install_release-1"><code>:release_handler.install_release/2</code></a>で取り込む(hot code upgrade)</li>
   <li>各チームのOTP appの更新は<a href="http://erlang.org/doc/man/release_handler.html#upgrade_app-2"><code>:release_handler.upgrade_app/2</code></a>で取り込む(hot code upgrade)</li>
   <li>“ややこしい”更新は特別扱いして、EC2インスタンス入れ替えで適用する</li>
   <li>hot code upgradeの際には<code>code_change/3</code>しない

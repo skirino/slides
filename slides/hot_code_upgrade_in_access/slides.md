@@ -185,19 +185,19 @@ end
 
 ---
 
-### solomonについて
+### antikytheraについて
 
-- 社内PaaS
+- OSSのPaaS framework
 - AWSで稼働中
 - 社内の各チームがそれぞれOTP applicationを作る
-- solomon coreチームがまとめて運用
+- antikythera coreチームがまとめて運用
 - (いろいろしゃべりたいが、時間の都合で略)
 
 ---
 
 ### 自動デプロイ方針
 
-- solomon本体の更新はreleaseを作って[`:release_handler.install_release/2`](http://erlang.org/doc/man/release_handler.html#install_release-1)で取り込む(hot code upgrade)
+- antikythera本体の更新はreleaseを作って[`:release_handler.install_release/2`](http://erlang.org/doc/man/release_handler.html#install_release-1)で取り込む(hot code upgrade)
 - 各チームのOTP appの更新は[`:release_handler.upgrade_app/2`](http://erlang.org/doc/man/release_handler.html#upgrade_app-2)で取り込む(hot code upgrade)
 - "ややこしい"更新は特別扱いして、EC2インスタンス入れ替えで適用する
 - hot code upgradeの際には`code_change/3`しない
