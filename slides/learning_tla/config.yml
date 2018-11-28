@@ -1,0 +1,13 @@
+theme:      "night"
+transition: "page"
+author:     "Shunsuke Kirino"
+title:      "TLA+入門"
+revealjs_config:
+  controls: true
+  slideNumber: true
+  history: true
+  dependencies:
+    - src:   "plugin/math/math.js"
+      async: true
+  math:
+    mathjax: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"

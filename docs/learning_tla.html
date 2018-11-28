@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
+    <meta charset="utf-8">
+
+<title>TLA+入門</title>
+
+<meta name="description" content="">
+<meta name="author" content="Shunsuke Kirino">
+<meta name="generator" content="reveal-ck 3.8.0">
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h2>TLA+入門</h2>
+
+<p>桐野 俊輔 (<a href="https://github.com/skirino">skirino</a>) @ <a href="http://jp.access-company.com/">ACCESS</a></p>
+
+<p>2018/11/28</p>
+
+</section>
+<section>
+<section>
+
+<h3>
+<a href="https://lamport.azurewebsites.net/tla/tla.html">TLA+</a>とは</h3>
+
+<ul>
+  <li>
+<a href="https://en.wikipedia.org/wiki/TLA%2B">wikipedia</a>より:
+    <ul>
+      <li>a formal specification language</li>
+      <li>by <a href="https://en.wikipedia.org/wiki/Leslie_Lamport">Leslie Lamport</a>
+</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>個人的なモチベーション</h3>
+
+<ul>
+  <li>(<a href="https://ramcloud.stanford.edu/~ongaro/thesis.pdf">Raftの論文</a>などは末尾にTLA+ specが記載されており、認識だけしていた)</li>
+  <li>「設計」という作業の成果物はどうあるべきか、よくわからない状態が続いていた</li>
+  <li>TLA+の適用事例を最近見つけて、うまく活用できれば理想的に思えた</li>
+</ul>
+
+</section>
+<section>
+
+<h3>事例: AWS</h3>
+
+<ul>
+  <li>
+<a href="https://lamport.azurewebsites.net/tla/formal-methods-amazon.pdf">Use of Formal Methods at AWS</a>
+    <ul>
+      <li>S3, DynamoDBなど、2014年時点で10プロジェクトで使用</li>
+      <li>“In every case TLA+ has added significant value”
+        <ul>
+          <li>他の手法で見つからないバグ発見、設計変更が適切かの検証</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>事例: Azure Cosmos DB</h3>
+
+<ul>
+  <li><a href="https://azure.microsoft.com/en-us/blog/a-technical-overview-of-azure-cosmos-db/">https://azure.microsoft.com/en-us/blog/a-technical-overview-of-azure-cosmos-db/</a></li>
+  <li><a href="https://www.youtube.com/watch?v=L_PPKyAsR3w">https://www.youtube.com/watch?v=L_PPKyAsR3w</a></li>
+  <li>(他にもいっぱい事例はあるはず)</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Benefits (1)</h3>
+
+<ul>
+  <li>曖昧さの無いspecを書くことで
+    <ul>
+      <li>「システムが何をすべきか・何をすべきでないか」を深く理解でき、また正確に伝達できる
+        <ul>
+          <li>副次的な効果として、コード上で有効なassertを書けるようになる</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>Benefits (2)</h3>
+
+<ul>
+  <li>TLC (model checker)を使ってspecを検証できる
+    <ul>
+      <li>特にconcurrent/distributedなbugは一般的に厄介だが、網羅的にチェックできる</li>
+      <li>specの問題はコードレベルでは取り戻せない</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>FAQ (1)</h3>
+
+<ul>
+  <li>TLA+ specと実コードとの対応は?
+    <ul>
+      <li>コードを生成するツールがあるわけではない。対応関係を維持するのは人間</li>
+      <li>TLA+はより抽象的なレベルで考えるためのツールという位置づけ</li>
+    </ul>
+  </li>
+  <li>model checkingは状態空間が膨大になるのでは?
+    <ul>
+      <li>これはTLCでも同様のはず。上記の事例だと複数マシンをぶん回している模様</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>FAQ (2)</h3>
+
+<ul>
+  <li>うまくいくのか?
+    <ul>
+      <li>コードのような発想で書くとすぐに複雑になってしまう</li>
+      <li>システムの本質を捉えられる範囲内で不要な複雑性を削ぎ落として頑張る</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>TLA+ specの概要(1)</h3>
+
+<ul>
+  <li>プログラミング言語よりも数学に近い</li>
+  <li>ASCIIで表記するがLaTeX経由で見やすくできる</li>
+  <li>モジュール化の仕組みが用意されている</li>
+</ul>
+
+</section>
+<section>
+
+<h3>TLA+ specの概要(2)</h3>
+
+<ul>
+  <li>“state”: 対象システムとまわりの環境を表現</li>
+  <li>“step”: stateを変更するイベント
+    <ul>
+      <li>ユーザ操作・伝送路上での故障などに対応</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>TLA+ specの概要(3)</h3>
+
+<ul>
+  <li>stateを構成する”variables”を宣言する
+    <ul>
+      <li>各プロセスの持っている情報</li>
+      <li>伝送路上にある転送中の情報</li>
+      <li>etc.</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>TLA+ specの概要(4)</h3>
+
+<ul>
+  <li>以下2つを定義する
+    <ul>
+      <li>$Init$ : 初期状態が満たすべき条件</li>
+      <li>$Next$ : 各stepのbefore/afterの満たすべき条件
+        <ul>
+          <li>複数種類のstepを$\vee$でつなぐ</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>TLA+ specの概要(5)</h3>
+
+<ul>
+  <li>$Init$と$Next$が決まったら、(大抵の場合)システムのspecは以下<br>
+$Spec \mathrel{\smash{{\stackrel{\scriptscriptstyle\Delta}{=}}}} Init \wedge \Box [Next]_{vars}$</li>
+</ul>
+
+</section>
+<section>
+
+<h3>TLA+ specの概要(6)</h3>
+
+<ul>
+  <li>$Spec$に基づいて動作するシステムで満たされるはずのinvariantを以下のように書く<br>
+<strong>THEOREM</strong> $Spec \Rightarrow \Box Inv$</li>
+  <li>たいていは各variableの取りうる値をチェックする</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>TLCの概要</h3>
+
+<ul>
+  <li>$Init$, $Next$, $Inv$を指定して実行</li>
+  <li>$Init$, $Next$を元に状態空間を探索</li>
+  <li>各状態が$Inv$を満たすことを確かめる</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Demo using <a href="http://lamport.azurewebsites.net/tla/toolbox.html">TLA toolbox</a>
+</h3>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>Learning materials</h3>
+
+<ul>
+  <li>
+<a href="http://lamport.azurewebsites.net/video/videos.html">The TLA+ Video Course</a>がおすすめ
+    <ul>
+      <li>丁寧、教育的、<a href="http://lamport.azurewebsites.net/tla/toolbox.html">toolbox</a>に即した内容</li>
+      <li>Lamport先生がおちゃめ</li>
+    </ul>
+  </li>
+  <li>本: <a href="http://lamport.azurewebsites.net/tla/book.html">Specifying Systems</a>
+    <ul>
+      <li>はっきり言って難しい</li>
+      <li>Liveness checkingおよびreal-time propertiesのため腰を据えて読む予定…</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>関連情報・ツールの紹介</h3>
+
+<ul>
+  <li>
+<a href="https://en.wikipedia.org/wiki/Temporal_logic_of_actions">Temporal Logic of Actions</a>
+    <ul>
+      <li>Temporal logic(時相論理)を元にした理論</li>
+    </ul>
+  </li>
+  <li>
+<a href="http://lamport.azurewebsites.net/tla/pluscal.html">PlusCal</a>
+    <ul>
+      <li>TLA+にtranspileされる別言語。アルゴリズム記述向け</li>
+    </ul>
+  </li>
+  <li>
+<a href="http://tla.msr-inria.inria.fr/tlaps/content/Home.html">TLAPS</a>
+    <ul>
+      <li>定理証明系</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>まとめ・雑感(1)</h3>
+
+<ul>
+  <li>何か役立てられそうか検討中。進展があったら別途発表する</li>
+  <li>教材・ツールが揃っていて思ったよりは取っつきやすい
+    <ul>
+      <li>Safety propertiesだけのチェックでも十分役に立つケースがありそう</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>まとめ・雑感(2)</h3>
+
+<ul>
+  <li>Property-based testingと近い部分もあるが、うまく橋渡しできるだろうか?</li>
+  <li>Erlangなどのactor system(や、その延長線上にある<a href="https://github.com/skirino/dist_agent">dist_agent</a>)はatomicな操作が明確になっており、TLA+ specとコードの対応関係がつけやすく相性が良いかもしれない</li>
+</ul>
+
+</section>
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'page',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+
+  
+
+  var configOptions = {"controls":true,"slideNumber":true,"history":true,"dependencies":[{"src":"plugin/math/math.js","async":true}],"math":{"mathjax":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"}}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>
