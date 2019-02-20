@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
+    <meta charset="utf-8">
+
+<title>Succinct data structures</title>
+
+<meta name="description" content="">
+<meta name="author" content="Shunsuke Kirino">
+<meta name="generator" content="reveal-ck 3.9.2">
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/theme/night.css" id="theme">
+
+<!-- Code syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<link rel="stylesheet" href="css/reveal-ck.css">
+
+
+<!-- Printing and PDF exports -->
+<script>
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
+
+<!--[if lt IE 9]>
+<script src="lib/js/html5shiv.js"></script>
+<![endif]-->
+
+  </head>
+
+  <body>
+    <div class="reveal">
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+    <section>
+
+<h2>Succinct data structures</h2>
+
+<p>桐野 俊輔 (<a href="https://github.com/skirino">skirino</a>) @ <a href="http://jp.access-company.com/">ACCESS</a></p>
+
+<p>2019/02/20</p>
+
+</section>
+<section>
+<section>
+
+<h3>今回の範囲</h3>
+<ul>
+  <li>
+<a href="https://www.amazon.co.jp/%E7%B0%A1%E6%BD%94%E3%83%87%E3%83%BC%E3%82%BF%E6%A7%8B%E9%80%A0-%E3%82%A2%E3%83%AB%E3%82%B4%E3%83%AA%E3%82%BA%E3%83%A0%E3%83%BB%E3%82%B5%E3%82%A4%E3%82%A8%E3%83%B3%E3%82%B9%E3%82%B7%E3%83%AA%E3%83%BC%E3%82%BA%E2%80%95%E6%95%B0%E7%90%86%E6%8A%80%E6%B3%95%E7%B7%A8-%E5%AE%9A%E5%85%BC-%E9%82%A6%E5%BD%A6/dp/4320121740">「簡潔データ構造」</a>のまとめ
+    <ul>
+      <li>ごく冒頭のエッセンスだけ。良い本だと思うので買おう</li>
+    </ul>
+  </li>
+  <li>基礎となるbitvectorについて
+    <ul>
+      <li>たいていのsuccinct data structureではbitvectorが部品になってる</li>
+      <li>メモリ量と処理のオーダーを理解してもらう</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>復習: big-O notation</h3>
+
+<ul>
+  <li>$O(f(n))$      : $n$が大きいときに$f(n)$の定数倍以下</li>
+  <li>$\Omega(f(n))$ : $n$が大きいときに$f(n)$の定数倍以上</li>
+  <li>$\Theta(f(n))$ : $n$が大きいときに$f(n)$の定数倍</li>
+  <li>$o(f(n))$      : $n$が大きいときに$f(n)$よりも十分小さい
+    <ul>
+      <li>たとえば$\lg n = o(n)$</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>例題</h3>
+<ul>
+  <li>$[0, 255]$の範囲内のintegerが$n=10^9$個並んだ列がある。以下のようなクエリをどう処理する?
+    <ol>
+      <li>$777777$回目に登場した$7$のindexは?</li>
+      <li>先頭から$5000000$番目までの間に$42$は何回出現したか?</li>
+    </ol>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>うまくやると</h3>
+<ul>
+  <li>前処理: O(n)</li>
+  <li>メモリ量: n + o(n) bytes</li>
+  <li>問い合わせ: O(1) (!)
+    <ul>
+      <li>他の数値に対するクエリもサポートしている</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>succinct data structure</h3>
+<ul>
+  <li>Information Theoretic Lower Boundに漸近的に近いデータ量でデータを保持</li>
+  <li>$o(ITLB)$の索引により効率のよいクエリ操作をサポート</li>
+  <li>データ量が大きいときに特に役に立つ</li>
+  <li>最近になって新しいデータ構造が考案されていて一部でホット(らしい)</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>bitvectorのサポートする処理</h3>
+<ul>
+  <li>$access(B, i)$  : $i$番目のビットを返す</li>
+  <li>$rank0(B, i)$   : $1..i$までの$0$の数を返す</li>
+  <li>$rank1(B, i)$</li>
+  <li>$select0(B, j)$ : $j$回目の$0$のindexを返す</li>
+  <li>$select1(B, j)$</li>
+</ul>
+
+</section>
+<section>
+
+<h3>単なる配列だと</h3>
+<ul>
+  <li>メモリ量: $n$ bits</li>
+  <li>access: $O(1)$</li>
+  <li>rank, select: $O(n)$
+    <ul>
+      <li>何らかのデータ構造が欲しい</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>rank1の高速化(1)</h3>
+<ul>
+  <li>ビット列をblockに分け、block内の集計を終わらせておけば、呼び出し時にはblock内部を処理すれば済む</li>
+  <li>が、block sizeは$n$に比例しており$O(1)$にはならない</li>
+  <li>同様に、blockの階層を作っても$O(1)$にはならない</li>
+</ul>
+
+</section>
+<section>
+
+<h3>word-RAMモデル</h3>
+<ul>
+  <li>単純なRAMモデルから多少現実的にした計算モデル</li>
+  <li>計算量の評価に使う</li>
+  <li>アドレス空間は$2^w$</li>
+  <li>word size: $w$
+    <ul>
+      <li>word単位のメモリアクセス・演算は1単位時間</li>
+      <li>現実では$w=32$もしくは$64$</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>rank1の高速化(2)</h3>
+<ul>
+  <li>大ブロック: $l = \lg^2 n$</li>
+  <li>小ブロック: $s = \frac{1}{2} \lg n$</li>
+  <li>以下の整数配列を用意
+    <ul>
+      <li>$R_L[j] = (j-1までの大ブロック内の1の数)$</li>
+      <li>$R_S[k] = (k-1までの小ブロック内の1の数)$</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>rank1の高速化(3)</h3>
+<ul>
+  <li>以下の3つを合計する
+    <ul>
+      <li>$i$が属する大ブロックまでの合計: $R_L[\lceil i/l \rceil]$</li>
+      <li>$i$が属する小ブロックまでの合計: $R_S[\lceil i/s \rceil]$</li>
+      <li>小ブロック内部のrank1計算は表引き(もしくはbitshift)により$O(1)$</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>rank1の索引のサイズ</h3>
+<ul>
+  <li>$R_L$: $O((n / l)\lg n) = O(n / \lg n)$
+    <ul>
+      <li>要素数: $n / l$</li>
+      <li>各要素のサイズ: $\lg(n + 1) ビット$</li>
+    </ul>
+  </li>
+  <li>$R_S$: $O((n / s)\lg l) = O(n \lg \lg n / \lg n)$
+    <ul>
+      <li>要素数: $n / s$</li>
+      <li>各要素のサイズ: $\lg l$ビット</li>
+    </ul>
+  </li>
+  <li>合わせても$o(n)$ビット</li>
+</ul>
+
+</section>
+<section>
+
+<h3>rank0の計算</h3>
+<ul>
+  <li>以下で済む。同じ索引を使い回せる<br>
+$rank0(B, i) = i - rank1(B, i)$</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>select1の高速化(1)</h3>
+<ul>
+  <li>大ブロック: $l = \lg^2 n$個の$1$を持つように分割
+    <ul>
+      <li>(rankのときは大ブロックの大きさは一定で$1$の数が可変だった。今回は大きさは可変で$1$の数が固定)</li>
+    </ul>
+  </li>
+  <li>大ブロックが疎かどうかで内部表現を2パターンにする</li>
+</ul>
+
+</section>
+<section>
+
+<h3>select1の高速化(2)</h3>
+
+<ul>
+  <li>大ブロックが$\lg^4 n$よりも長く$1$がほとんどない =&gt; $1$の位置をそのまま格納
+    <ul>
+      <li>位置を表す$\lg n$までの整数が$\lg^2 n$個</li>
+      <li>すべて疎だったとすると$n / \lg^4 n$個の大ブロックがある。全部で$O(n / \lg n)$</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>select1の高速化(3)</h3>
+
+<ul>
+  <li>密な場合(大ブロックの長さが$\lg^4 n$より短い)
+    <ul>
+      <li>小ブロック: $s = \frac{1}{2} \lg n$の長さで分割</li>
+      <li>少ブロックを葉にもつ$\sqrt{\lg n}$分木を構築
+        <ul>
+          <li>小ブロックの数は$2 \lg^3 n$個以下 =&gt; 木の高さは定数</li>
+        </ul>
+      </li>
+      <li>各nodeで配下の$1$の数を幅優先で格納
+        <ul>
+          <li>各要素は$l$までの整数。$O(\lg \lg n)$ビット</li>
+        </ul>
+      </li>
+      <li>nodeが$O(n / s)$個。木は$O(n \lg \lg n / \lg n)$ビット</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>select1の高速化(4)</h3>
+<ul>
+  <li>加えて、各大ブロックのデータ構造へのポインタ
+    <ul>
+      <li>$O(n \lg n / l) = O(n / \lg n)$ビット</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>select1(B, i)の計算(2)</h3>
+<ul>
+  <li>まずiの属する大ブロックを(割り算で)求める</li>
+  <li>疎ならばそのまま配列に答えがある</li>
+  <li>密なら
+    <ul>
+      <li>木の根からi番目がいる葉を探索</li>
+    </ul>
+  </li>
+</ul>
+
+</section>
+<section>
+
+<h3>select1(B, i)の計算(3)</h3>
+<ul>
+  <li>1つのnodeから次の子を$\sqrt{\lg n}$個の子のなかから探すときは、table lookupが使える
+    <ul>
+      <li>子の数: $\sqrt{\lg n}$</li>
+      <li>子のサイズ: $\lg \lg n$</li>
+      <li>合計で $O(\sqrt{\lg n} \lg \lg n) = o(\lg n)$なので、$O(1)$で取得して次の子を表引きできる</li>
+    </ul>
+  </li>
+  <li>木の高さも定数なので、定数回の操作で葉にたどり着く</li>
+  <li>葉の中のselect1もtable lookupで$O(1)$</li>
+</ul>
+
+</section>
+<section>
+
+<h3>select0の計算</h3>
+<ul>
+  <li>select1の索引の反転バージョンを別途作っておき使う</li>
+</ul>
+
+</section>
+</section>
+
+<section>
+<section>
+
+<h3>疎なビットベクトル</h3>
+<ul>
+  <li>$0$と$1$のビットの出現頻度に偏りがあればより圧縮できる</li>
+  <li>いろんなエンコーディング方式とaccess, rank, selectを両立させる手法が考案されている</li>
+</ul>
+
+</section>
+<section>
+
+<h3>実装上の話題</h3>
+<ul>
+  <li>selectの方が複雑な処理になるので、rankだけ$O(1)$にしてselectは二分探索にする実装も多い</li>
+  <li>table lookupは不要な場合もあって、shiftしてbitcountすればOKだったりもする</li>
+</ul>
+
+</section>
+</section>
+
+  </div>
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+
+<script>
+  (function() {
+  function extend( a, b ) {
+    for(var i in b) {
+      a[i] = b[i];
+    }
+  }
+  var baseOptions = {
+    transition: 'page',
+
+    dependencies: [
+      { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'plugin/zoom-js/zoom.js', async: true },
+      { src: 'plugin/notes/notes.js', async: true }
+    ]
+  };
+
+  
+
+  var configOptions = {"controls":true,"slideNumber":true,"history":true,"dependencies":[{"src":"plugin/math/math.js","async":true}],"math":{"mathjax":"https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js"}}
+  var initializeOptions = {};
+  extend(initializeOptions, baseOptions);
+  extend(initializeOptions, configOptions);
+  Reveal.initialize(initializeOptions);
+})();
+
+</script>
+
+  </body>
+</html>

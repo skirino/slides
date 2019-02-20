@@ -15,4 +15,5 @@
 - [On Purely Functional Data Structures](https://skirino.github.io/slides/purely_functional_data_structures.html)
 - [Introduction to raft_fleet](https://skirino.github.io/slides/raft_fleet.html)
 - [Success Typing and Dialyzer](https://skirino.github.io/slides/success_typing_and_dialyzer.html)
+- [Succinct data structures](https://skirino.github.io/slides/succinct_data_structures.html)
 - [Transactional Information Systems](https://skirino.github.io/slides/transactional_information_systems.html)
