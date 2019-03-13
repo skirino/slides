@@ -64,7 +64,7 @@
       <li>ごく冒頭のエッセンスだけ。良い本だと思うので買おう</li>
     </ul>
   </li>
-  <li>基礎となるbitvectorについて
+  <li>基礎となるbitvectorについてしゃべる
     <ul>
       <li>たいていのsuccinct data structureではbitvectorが部品になってる</li>
       <li>メモリ量と処理のオーダーを理解してもらう</li>
@@ -129,9 +129,12 @@
 
 <h3>succinct data structure</h3>
 <ul>
-  <li>Information Theoretic Lower Boundに漸近的に近いデータ量でデータを保持</li>
-  <li>$o(ITLB)$の索引により効率のよいクエリ操作をサポート</li>
-  <li>データ量が大きいときに特に役に立つ</li>
+  <li>Information Theoretic Lower Boundに漸近的に近いデータ量でデータを保持
+    <ul>
+      <li>$o(ITLB)$の索引により効率のよいクエリ操作をサポート</li>
+    </ul>
+  </li>
+  <li>データ量が大きいときに特に効いてくる</li>
   <li>最近になって新しいデータ構造が考案されていて一部でホット(らしい)</li>
 </ul>
 
@@ -144,7 +147,7 @@
 <h3>bitvectorのサポートする処理</h3>
 <ul>
   <li>$access(B, i)$  : $i$番目のビットを返す</li>
-  <li>$rank0(B, i)$   : $1..i$までの$0$の数を返す</li>
+  <li>$rank0(B, i)$   : $[1, i)$の$0$の数を返す</li>
   <li>$rank1(B, i)$</li>
   <li>$select0(B, j)$ : $j$回目の$0$のindexを返す</li>
   <li>$select1(B, j)$</li>
@@ -202,8 +205,8 @@
   <li>小ブロック: $s = \frac{1}{2} \lg n$</li>
   <li>以下の整数配列を用意
     <ul>
-      <li>$R_L[j] = (j-1までの大ブロック内の1の数)$</li>
-      <li>$R_S[k] = (k-1までの小ブロック内の1の数)$</li>
+      <li>$R_L[j] =$ ($j-1$までの大ブロック内の$1$の数)</li>
+      <li>$R_S[k] =$ ($k-1$までの小ブロック内の$1$の数)</li>
     </ul>
   </li>
 </ul>
